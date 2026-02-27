@@ -1,0 +1,47 @@
+{
+  "group_name": "紧急企划",
+  "post_title": "测试视频2",
+  "video_count": 4,
+  "videos": [
+    {
+      "name": "112 - 8.18-2",
+      "original_file": "112 - 8.18-2.mp4",
+      "size": 113351042,
+      "duration": 112.066667,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "hls_playlist": "112 - 8.18-2/playlist.m3u8"
+    },
+    {
+      "name": "video_2025-09-02_23-59-32",
+      "original_file": "video_2025-09-02_23-59-32.mp4",
+      "size": 107556666,
+      "duration": 314.630385,
+      "width": 1280,
+      "height": 720,
+      "codec": "h264",
+      "hls_playlist": "video_2025-09-02_23-59-32/playlist.m3u8"
+    },
+    {
+      "name": "video_2025-09-03_00-01-03",
+      "original_file": "video_2025-09-03_00-01-03.mp4",
+      "size": 20237633,
+      "duration": 59.2,
+      "width": 1280,
+      "height": 720,
+      "codec": "h264",
+      "hls_playlist": "video_2025-09-03_00-01-03/playlist.m3u8"
+    },
+    {
+      "name": "video_2025-09-03_00-03-05",
+      "original_file": "video_2025-09-03_00-03-05.mp4",
+      "size": 8105355,
+      "duration": 45.445433,
+      "width": 604,
+      "height": 1080,
+      "codec": "h264",
+      "hls_playlist": "video_2025-09-03_00-03-05/playlist.m3u8"
+    }
+  ]
+}
