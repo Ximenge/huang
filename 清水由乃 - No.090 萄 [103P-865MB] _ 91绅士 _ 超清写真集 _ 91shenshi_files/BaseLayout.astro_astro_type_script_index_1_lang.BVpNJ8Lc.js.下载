@@ -1,0 +1,1 @@
+import{_ as e}from"./preload-helper.BlTxHScW.js";document.addEventListener("astro:page-load",async()=>{(await e(()=>import("./BaseHead.astro_astro_type_script_index_0_lang.vdxexzma.js").then(t=>t.p),[])).HSStaticMethods.autoInit()});
