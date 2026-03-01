@@ -116,38 +116,48 @@ def convert_to_webp(input_path, dpi=72, quality=75):
         return False
 
 def copy_webp_files(source_dir, target_dir):
-    """复制目录中的所有 webp 文件到目标目录"""
+    """复制目录中的所有 webp 文件到目标目录，并按顺序重命名
+    
+    Args:
+        source_dir: 源目录
+        target_dir: 目标目录
+        
+    Returns:
+        复制的文件数量
+    """
     copied_files = 0
+    
+    # 收集所有 webp 文件及其路径
+    webp_files = []
     
     # 遍历目录及其子目录
     for root, _, files in os.walk(source_dir):
         for file in files:
             # 检查是否为 webp 文件
             if file.lower().endswith('.webp'):
-                # 构建源文件路径
                 source_path = os.path.join(root, file)
-                
-                # 构建目标文件路径（保持相对路径结构）
-                relative_path = os.path.relpath(root, source_dir)
-                if relative_path != '.':
-                    target_subdir = os.path.join(target_dir, relative_path)
-                    # 创建目标子目录
-                    os.makedirs(target_subdir, exist_ok=True)
-                    target_path = os.path.join(target_subdir, file)
-                else:
-                    target_path = os.path.join(target_dir, file)
-                
-                # 检查目标文件是否存在
-                if os.path.exists(target_path):
-                    print(f"跳过: {os.path.basename(file)} (目标文件已存在)")
-                else:
-                    # 复制文件
-                    try:
-                        shutil.copy2(source_path, target_path)
-                        print(f"已复制: {os.path.basename(file)} -> {target_path}")
-                        copied_files += 1
-                    except Exception as e:
-                        print(f"复制失败 {os.path.basename(file)}: {str(e)}")
+                webp_files.append((source_path, file))
+    
+    # 按文件名排序，确保顺序一致
+    webp_files.sort(key=lambda x: x[1])
+    
+    # 按顺序复制并重命名文件
+    for idx, (source_path, original_name) in enumerate(webp_files, 1):
+        # 生成新的文件名：001.webp, 002.webp, 003.webp, ...
+        new_filename = f"{idx:03d}.webp"
+        target_path = os.path.join(target_dir, new_filename)
+        
+        # 检查目标文件是否存在
+        if os.path.exists(target_path):
+            print(f"跳过: {new_filename} (目标文件已存在)")
+        else:
+            # 复制文件
+            try:
+                shutil.copy2(source_path, target_path)
+                print(f"已复制: {original_name} -> {new_filename}")
+                copied_files += 1
+            except Exception as e:
+                print(f"复制失败 {original_name}: {str(e)}")
     
     return copied_files
 
@@ -255,9 +265,10 @@ if __name__ == "__main__":
         print(f"\n创建目标文件夹: {target_directory}")
         os.makedirs(target_directory, exist_ok=True)
     
-    # 复制 webp 文件到目标文件夹
-    print("\n开始复制 webp 文件到目标文件夹...")
+    # 复制 webp 文件到目标文件夹并重命名
+    print("\n开始复制 webp 文件到目标文件夹并按顺序重命名...")
     copied_count = copy_webp_files(current_directory, target_directory)
     
     print(f"\n复制完成！")
     print(f"成功复制: {copied_count} 个 webp 文件")
+    print(f"文件已按顺序重命名为: 001.webp, 002.webp, 003.webp, ...")
