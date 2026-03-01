@@ -303,7 +303,7 @@ if __name__ == "__main__":
     print(f"目标DPI: {TARGET_DPI}")
     print(f"最大分辨率: {MAX_RESOLUTION}px（含）")
     
-    json_record_path = os.path.join(current_directory, "conversion_record_optimized.json")
+    json_record_path = os.path.join(current_directory, "conversion_record.json")
     
     print(f"\n加载转换记录: {json_record_path}")
     conversion_record = load_conversion_record(json_record_path)
@@ -315,7 +315,7 @@ if __name__ == "__main__":
         save_conversion_record(json_record_path, conversion_record)
     
     current_dir_name = os.path.basename(current_directory)
-    target_directory = os.path.join(os.path.dirname(current_directory), f"{current_dir_name}-optimized")
+    target_directory = os.path.join(os.path.dirname(current_directory), f"{current_dir_name}-1")
     
     if os.path.exists(target_directory):
         print(f"\n目标文件夹已存在，直接使用: {target_directory}")

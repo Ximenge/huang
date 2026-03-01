@@ -2,11 +2,15 @@ import os
 from pathlib import Path
 from datetime import datetime
 import json
+from urllib.parse import quote
+import re
+from pypinyin import lazy_pinyin
 
 # Configuration
+IMAGE_ORIGINAL_PATH = r"C:\huang\image"
 IMAGE_1_PATH = r"C:\huang\Image-1"
 ASTRO_POSTS_PATH = r"C:\huang\astro-melody-starter\src\content\posts"
-R2_BASE_URL = "https://pub-58906530c3a643c1b5d1101b21b03114.r2.dev"
+R2_BASE_URL = "https://image.91tutu.cc"
 
 # Excluded files and directories
 EXCLUDED_NAMES = {'conversion_record.json', 'upload_to_r2.ps1', 'upload_to_r2.py', 'convert_to_webp.py', 'convert_to_webp.bat', 'README_upload_script.md', 'ceshi.txt', 'files.txt'}
@@ -19,42 +23,96 @@ def get_webp_files(folder_path):
             webp_files.append(file)
     return sorted(webp_files)
 
+def sanitize_slug(name):
+    """Convert Chinese to pinyin, replace spaces with hyphens, and create a clean slug"""
+    # Convert Chinese characters to pinyin
+    pinyin_list = lazy_pinyin(name)
+    slug = ''.join(pinyin_list)
+    
+    # Replace spaces with hyphens
+    slug = slug.replace(' ', '-')
+    
+    # Remove any characters that are not alphanumeric, hyphens, or underscores
+    slug = re.sub(r'[^a-zA-Z0-9-_]', '', slug)
+    
+    # Replace multiple hyphens with single hyphen
+    slug = re.sub(r'-+', '-', slug)
+    
+    # Remove leading/trailing hyphens
+    slug = slug.strip('-')
+    
+    # If slug is empty (unlikely), use a default
+    if not slug:
+        slug = 'untitled'
+    
+    return slug
+
+def load_metadata(folder_name):
+    """Load metadata from post_metadata.json if exists (from original image folder)"""
+    metadata_path = os.path.join(IMAGE_ORIGINAL_PATH, folder_name, 'post_metadata.json')
+    if os.path.exists(metadata_path):
+        try:
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"  [WARNING] Failed to read metadata: {str(e)}")
+    return None
+
 def generate_markdown(folder_name, webp_files):
     """Generate markdown content for a folder"""
-    # Convert folder name to slug (replace spaces with hyphens, keep original case)
-    slug = folder_name.replace(' ', '-')
+    # Sanitize slug for Cloudflare Pages compatibility
+    slug = sanitize_slug(folder_name)
+    # URL encode the original folder name for R2 URLs
+    slug_encoded = quote(folder_name, safe='')
+    
+    # Load metadata
+    metadata = load_metadata(folder_name)
+    
+    # Default values
+    category = "Gallery"
+    tags = ["images", "gallery"]
+    description = ""
+    
+    if metadata:
+        category = metadata.get("category", category)
+        tags = metadata.get("tags", tags)
+        description = metadata.get("description", "")
     
     # Use first image as cover
-    cover_url = f"{R2_BASE_URL}/{slug}/{webp_files[0]}"
+    cover_url = f"{R2_BASE_URL}/image/{slug_encoded}/{quote(webp_files[0], safe='')}"
+    
+    # Generate tags YAML
+    tags_yaml = "\n".join([f"- {tag}" for tag in tags])
+    
+    # 构建正文内容
+    # 1. 添加图片（每张图片单独一行，使用 markdown 图片语法）
+    body_content = ""
+    for img_file in webp_files:
+        img_url = f"{R2_BASE_URL}/image/{slug_encoded}/{quote(img_file, safe='')}"
+        body_content += f"![{img_file}]({img_url})\n\n"
+    
+    # 2. 最后添加描述（如果有）
+    if description:
+        body_content += f"{description}\n\n"
     
     # Generate frontmatter
     frontmatter = f"""---
-author: Image Gallery
 category:
-- Gallery
+- {category}
 cover: {cover_url}
-coverAlt: {folder_name} gallery image
-description: A collection of images from {folder_name}
+coverAlt: {folder_name}
+description: {folder_name} - {len(webp_files)}张图片
 pubDate: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 slug: {slug}
 tags:
-- images
-- gallery
+{tags_yaml}
 title: {folder_name}
 ---
 
 """
     
-    # Generate image gallery content
-    content = f"# {folder_name}\n\n"
-    content += f"This gallery contains {len(webp_files)} images.\n\n"
-    content += "## Image Gallery\n\n"
-    
-    for img_file in webp_files:
-        img_url = f"{R2_BASE_URL}/{slug}/{img_file}"
-        content += f"![{img_file}]({img_url})\n\n"
-    
-    return frontmatter + content
+    # 返回 frontmatter + 正文内容
+    return frontmatter + body_content
 
 def main():
     print("========================================")
@@ -92,8 +150,8 @@ def main():
         # Generate markdown content
         markdown_content = generate_markdown(folder_name, webp_files)
         
-        # Generate filename
-        slug = folder_name.replace(' ', '-').lower()
+        # Generate filename using sanitized slug
+        slug = sanitize_slug(folder_name)
         md_filename = f"{slug}.md"
         md_path = os.path.join(ASTRO_POSTS_PATH, md_filename)
         

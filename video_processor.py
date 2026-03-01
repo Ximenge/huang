@@ -159,7 +159,9 @@ def process_video_to_hls(input_path, output_folder, segment_duration=10):
             'ffmpeg',
             '-i', str(input_path),
             '-c:v', 'libx264',
+            '-crf', '28',
             '-c:a', 'aac',
+            '-vf', 'scale=-2:1080',
             '-f', 'hls',
             '-hls_time', str(segment_duration),
             '-hls_list_size', '0',
@@ -182,7 +184,53 @@ def process_video_to_hls(input_path, output_folder, segment_duration=10):
         return False, None
 
 
-def generate_post_metadata(output_folder, video_files_info, group_name, post_title):
+def extract_video_cover(input_path, output_folder):
+    """
+    从视频中提取封面图片（第1秒的画面）
+    
+    Args:
+        input_path: 输入视频路径
+        output_folder: 输出文件夹路径
+    
+    Returns:
+        str: 封面文件名，失败返回 None
+    """
+    try:
+        video_name = Path(input_path).stem
+        cover_filename = f"{video_name}_cover.jpg"
+        cover_path = os.path.join(output_folder, cover_filename)
+        
+        # 如果封面已存在，跳过
+        if os.path.exists(cover_path):
+            print(f"        跳过封面提取: {cover_filename} (已存在)")
+            return cover_filename
+        
+        print(f"        正在提取封面: {cover_filename}")
+        
+        cmd = [
+            'ffmpeg',
+            '-i', str(input_path),
+            '-ss', '00:00:01',  # 第1秒
+            '-vframes', '1',     # 提取1帧
+            '-q:v', '2',         # 图片质量
+            str(cover_path)
+        ]
+        
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+        
+        if result.returncode == 0 and os.path.exists(cover_path):
+            print(f"        [OK] 封面提取成功: {cover_filename}")
+            return cover_filename
+        else:
+            print(f"        [FAIL] 封面提取失败: {os.path.basename(input_path)}")
+            return None
+            
+    except Exception as e:
+        print(f"        [ERROR] 封面提取异常: {str(e)}")
+        return None
+
+
+def generate_post_metadata(output_folder, video_files_info, group_name, post_title, cover_file=None):
     """生成博文的元数据"""
     metadata = {
         "group_name": group_name,
@@ -190,6 +238,10 @@ def generate_post_metadata(output_folder, video_files_info, group_name, post_tit
         "video_count": len(video_files_info),
         "videos": video_files_info
     }
+    
+    # 添加封面信息
+    if cover_file:
+        metadata["cover"] = cover_file
     
     metadata_file = os.path.join(output_folder, "metadata.json")
     try:
@@ -234,6 +286,7 @@ def process_second_level_folder(source_folder, output_folder, group_name, post_t
     
     converted_count = 0
     video_files_info = []
+    cover_file = None
     
     for video_file in video_files:
         input_path = os.path.join(source_folder, video_file)
@@ -244,9 +297,13 @@ def process_second_level_folder(source_folder, output_folder, group_name, post_t
             video_info = get_video_info(input_path)
             video_info["hls_playlist"] = f"{video_name}/playlist.m3u8"
             video_files_info.append(video_info)
+            
+            # 提取第一个视频的封面作为博文封面
+            if cover_file is None:
+                cover_file = extract_video_cover(input_path, output_folder)
     
     if converted_count > 0:
-        generate_post_metadata(output_folder, video_files_info, group_name, post_title)
+        generate_post_metadata(output_folder, video_files_info, group_name, post_title, cover_file)
         add_conversion_record(record, source_folder, converted_count, output_folder, group_name, post_title)
     
     print(f"      完成: {converted_count}/{len(video_files)} 个视频处理成功")

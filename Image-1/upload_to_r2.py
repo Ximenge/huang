@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Configuration
 REMOTE_NAME = "small"
-BASE_REMOTE_PATH = "small"
+BASE_REMOTE_PATH = "small/image"
 LOCAL_PATH = r"C:\huang\Image-1"
 
 # Color codes for terminal output
@@ -21,26 +21,12 @@ def print_color(message, color=Colors.RESET):
     print(f"{color}{message}{Colors.RESET}")
 
 def convert_folder_name(folder_name):
-    """Convert folder name (replace spaces with hyphens)"""
-    return folder_name.replace(' ', '-')
+    """Convert folder name (keep original)"""
+    return folder_name
 
 def test_remote_directory_exists(remote_dirs, target_dir):
-    """Check if remote directory exists (with space/hyphen conversion)"""
-    # Check exact match
-    if target_dir in remote_dirs:
-        return True
-    
-    # Check with space to hyphen conversion
-    converted_name = convert_folder_name(target_dir)
-    if converted_name in remote_dirs:
-        return True
-    
-    # Check with hyphen to space conversion
-    reversed_name = target_dir.replace('-', ' ')
-    if reversed_name in remote_dirs:
-        return True
-    
-    return False
+    """Check if remote directory exists"""
+    return target_dir in remote_dirs
 
 def get_remote_directories(remote_path):
     """Get R2 remote directory list"""
