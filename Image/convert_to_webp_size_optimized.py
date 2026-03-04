@@ -25,17 +25,19 @@ def save_conversion_record(json_path, record):
 
 def is_directory_converted(record, dir_path):
     """检查目录是否已转换过"""
-    return dir_path in record
+    normalized_path = dir_path[0].lower() + dir_path[1:]
+    return normalized_path in record or any(k.lower() == normalized_path.lower() for k in record.keys())
 
 def add_conversion_record(record, dir_path, converted_count, target_dir):
     """添加转换记录"""
-    record[dir_path] = {
+    normalized_path = dir_path[0].lower() + dir_path[1:]
+    record[normalized_path] = {
         "converted_count": converted_count,
         "target_directory": target_dir,
         "timestamp": os.path.getmtime(dir_path) if os.path.exists(dir_path) else None
     }
 
-def convert_to_webp_with_size_limit(input_path, max_size_kb=200, dpi=72, min_quality=50, max_resolution=1440):
+def convert_to_webp_with_size_limit(input_path, max_size_kb=200, dpi=72, min_quality=50, max_resolution=1440, output_filename=None):
     """将图片转换为webp格式，优先保持比例和分辨率
     
     Args:
@@ -44,13 +46,17 @@ def convert_to_webp_with_size_limit(input_path, max_size_kb=200, dpi=72, min_qua
         dpi: 目标DPI值，默认72
         min_quality: 最低WebP质量，默认50
         max_resolution: 最大分辨率（长或宽），默认1440
+        output_filename: 输出文件名（可选）
     """
     try:
         img = Image.open(input_path)
         original_width, original_height = img.size
         original_ratio = original_width / original_height if original_height > 0 else 1
         
-        output_path = os.path.splitext(input_path)[0] + '.webp'
+        if output_filename:
+            output_path = os.path.join(os.path.dirname(input_path), output_filename)
+        else:
+            output_path = os.path.splitext(input_path)[0] + '.webp'
         
         original_file_size = os.path.getsize(input_path) / 1024
         
@@ -218,6 +224,11 @@ def copy_webp_files(source_dir, target_dir):
     
     return copied_files
 
+def natural_sort_key(s):
+    """自然排序键生成函数"""
+    import re
+    return [int(text) if text.isdigit() else text.lower() for text in re.split('([0-9]+)', s)]
+
 def batch_convert(directory, record=None, max_size_kb=200, dpi=72, max_resolution=1440):
     """批量转换目录中的所有图片文件
     
@@ -244,27 +255,34 @@ def batch_convert(directory, record=None, max_size_kb=200, dpi=72, max_resolutio
             print(f"跳过已转换的目录: {root}")
             continue
         
-        dir_converted_count = 0
+        # 收集所有支持的图片文件
+        image_files = []
         for file in files:
             ext = os.path.splitext(file)[1].lower()
+            if ext != '.webp' and ext in supported_formats:
+                image_files.append(file)
+        
+        # 按自然顺序排序文件
+        image_files.sort(key=natural_sort_key)
+        
+        dir_converted_count = 0
+        for i, file in enumerate(image_files, 1):
+            total_files += 1
+            input_path = os.path.join(root, file)
             
-            if ext == '.webp':
-                continue
+            # 生成新的文件名：001.webp, 002.webp, ...
+            output_filename = f"{i:03d}.webp"
+            
+            original_size = os.path.getsize(input_path) / 1024
+            total_original_size += original_size
+            
+            if convert_to_webp_with_size_limit(input_path, max_size_kb=max_size_kb, dpi=dpi, max_resolution=max_resolution, output_filename=output_filename):
+                converted_files += 1
+                dir_converted_count += 1
                 
-            if ext in supported_formats:
-                total_files += 1
-                input_path = os.path.join(root, file)
-                
-                original_size = os.path.getsize(input_path) / 1024
-                total_original_size += original_size
-                
-                if convert_to_webp_with_size_limit(input_path, max_size_kb=max_size_kb, dpi=dpi, max_resolution=max_resolution):
-                    converted_files += 1
-                    dir_converted_count += 1
-                    
-                    webp_path = os.path.splitext(input_path)[0] + '.webp'
-                    if os.path.exists(webp_path):
-                        total_webp_size += os.path.getsize(webp_path) / 1024
+                webp_path = os.path.join(root, output_filename)
+                if os.path.exists(webp_path):
+                    total_webp_size += os.path.getsize(webp_path) / 1024
         
         if dir_converted_count > 0 and record is not None:
             relative_path = os.path.relpath(root, directory)

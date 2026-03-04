@@ -1,0 +1,18 @@
+{
+  "group_name": "紧急企划",
+  "post_title": "紧急企划 - 内部定制 小恩 优等生",
+  "video_count": 1,
+  "videos": [
+    {
+      "name": "1",
+      "original_file": "1.mp4",
+      "size": 10635631283,
+      "duration": 1879.402667,
+      "width": 3840,
+      "height": 2160,
+      "codec": "h264",
+      "hls_playlist": "1/playlist.m3u8"
+    }
+  ],
+  "cover": "1_cover.jpg"
+}

@@ -159,7 +159,7 @@ def process_video_to_hls(input_path, output_folder, segment_duration=10):
             'ffmpeg',
             '-i', str(input_path),
             '-c:v', 'libx264',
-            '-crf', '28',
+            '-b:v', '1000k',
             '-c:a', 'aac',
             '-vf', 'scale=-2:1080',
             '-f', 'hls',
