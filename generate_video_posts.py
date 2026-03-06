@@ -104,6 +104,20 @@ def sanitize_slug(name):
     
     return slug
 
+def escape_yaml_string(value):
+    """转义 YAML 字符串，处理特殊字符"""
+    if not isinstance(value, str):
+        return str(value)
+    
+    # YAML 中需要引号包裹的特殊字符
+    special_chars = [':', '{', '}', '[', ']', ',', '&', '*', '#', '?', '|', '-', '<', '>', '=', '!', '%', '@', '\\', '"', "'", '\n']
+    
+    if any(c in value for c in special_chars):
+        # 双引号需要转义
+        escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
 def load_post_metadata(group_name, post_title):
     """从原始video目录加载post_metadata.json"""
     post_metadata_file = os.path.join(VIDEO_ORIGINAL_DIR, group_name, post_title, "post_metadata.json")
@@ -113,6 +127,45 @@ def load_post_metadata(group_name, post_title):
                 return json.load(f)
         except Exception as e:
             print(f"      警告: 无法读取post_metadata.json: {str(e)}")
+    
+    # 尝试匹配转换后的目录名（将 --- 转换为 - ，将 - 转换为空格）
+    # video-1 目录名格式: "紧急企划---奶昔---居家-[143P3V-8.50G]"
+    # video 目录名格式: "紧急企划 - 奶昔 - 居家 [143P3V-8.50G]"
+    converted_title = post_title.replace('---', ' - ').replace('-', ' ', 1)
+    # 处理括号前的空格
+    converted_title = converted_title.replace('-[', ' [')
+    
+    post_metadata_file = os.path.join(VIDEO_ORIGINAL_DIR, group_name, converted_title, "post_metadata.json")
+    if os.path.exists(post_metadata_file):
+        try:
+            with open(post_metadata_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"      警告: 无法读取post_metadata.json: {str(e)}")
+    
+    # 尝试遍历 video 目录下的分组目录，查找匹配的 post_metadata.json
+    group_path = os.path.join(VIDEO_ORIGINAL_DIR, group_name)
+    if os.path.exists(group_path):
+        for folder_name in os.listdir(group_path):
+            folder_path = os.path.join(group_path, folder_name)
+            if os.path.isdir(folder_path):
+                metadata_path = os.path.join(folder_path, "post_metadata.json")
+                if os.path.exists(metadata_path):
+                    # 检查文件夹名是否与 post_title 相似（忽略分隔符差异）
+                    # 将两个名称都标准化后比较
+                    normalized_folder = folder_name.replace(' ', '-').replace('---', '-')
+                    normalized_title = post_title.replace(' ', '-').replace('---', '-')
+                    # 移除特殊字符后比较
+                    import re as re_module
+                    clean_folder = re_module.sub(r'[^a-zA-Z0-9\u4e00-\u9fff]', '', normalized_folder)
+                    clean_title = re_module.sub(r'[^a-zA-Z0-9\u4e00-\u9fff]', '', normalized_title)
+                    if clean_folder == clean_title:
+                        try:
+                            with open(metadata_path, 'r', encoding='utf-8') as f:
+                                return json.load(f)
+                        except Exception as e:
+                            print(f"      警告: 无法读取post_metadata.json: {str(e)}")
+    
     return None
 
 
@@ -134,16 +187,7 @@ def generate_md_file(group_name, post_title, metadata, post_metadata=None):
     group_name_encoded = quote(group_name, safe='')
     post_title_encoded = quote(post_title, safe='')
     
-    videos_yaml = []
-    for video in videos:
-        hls_path = video.get("hls_playlist", "")
-        name = video.get("name", "")
-        # 保留路径中的斜杠，只编码其他特殊字符
-        hls_path_encoded = quote(hls_path, safe='/')
-        videos_yaml.append(f'  - name: "{name}"')
-        videos_yaml.append(f'    hlsUrl: {R2_BASE_URL}/video/{group_name_encoded}/{post_title_encoded}/{hls_path_encoded}')
-    
-    pub_date = datetime.now().strftime("%Y-%m-%d")
+    pub_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Default values
     category = "Video"
@@ -153,41 +197,50 @@ def generate_md_file(group_name, post_title, metadata, post_metadata=None):
         category = post_metadata.get("category", category)
         tags = post_metadata.get("tags", tags)
     
-    # Generate tags YAML
-    tags_yaml = "\n".join([f"- {tag}" for tag in tags])
-    
-    # 构建正文内容 - 简化格式
-    body_content = ""
-    
-    # 只添加描述（如果有）
-    if post_metadata and post_metadata.get("description"):
-        body_content += f"{post_metadata.get('description')}\n"
-    
-    body_content += "\n"
+    # 手动构建 frontmatter，确保格式正确
+    frontmatter_lines = ["---"]
+    frontmatter_lines.append(f"title: {escape_yaml_string(post_title)}")
+    frontmatter_lines.append(f"series: {escape_yaml_string(group_name)}")
+    frontmatter_lines.append(f"description: {escape_yaml_string(f'{post_title} - {video_count}个视频')}")
+    frontmatter_lines.append(f"pubDate: {pub_date}")
     
     # 处理封面
     cover = metadata.get("cover")
-    cover_yaml = ""
     if cover:
-        cover_url = f"{R2_BASE_URL}/video/{group_name_encoded}/{post_title_encoded}/{quote(cover, safe='')}" 
-        cover_yaml = f"cover: {cover_url}\n"
+        cover_url = f"{R2_BASE_URL}/video/{group_name_encoded}/{post_title_encoded}/{quote(cover, safe='')}"
+        frontmatter_lines.append(f"cover: {cover_url}")
     
-    content = f'''---
-title: {post_title}
-series: {group_name}
-description: {post_title} - {video_count}个视频
-pubDate: "{pub_date}"
-{cover_yaml}category:
-- {category}
-tags:
-{tags_yaml}
-videoCount: {video_count}
-videos:
-{chr(10).join(videos_yaml)}
----
-
-{body_content}
-'''
+    # category
+    frontmatter_lines.append("category:")
+    frontmatter_lines.append(f"- {escape_yaml_string(category)}")
+    
+    # tags
+    frontmatter_lines.append("tags:")
+    for tag in tags:
+        frontmatter_lines.append(f"- {escape_yaml_string(tag)}")
+    
+    # videoCount
+    frontmatter_lines.append(f"videoCount: {video_count}")
+    
+    # videos
+    frontmatter_lines.append("videos:")
+    for video in videos:
+        hls_path = video.get("hls_playlist", "")
+        name = video.get("name", "")
+        hls_path_encoded = quote(hls_path, safe='/')
+        frontmatter_lines.append(f'  - name: {escape_yaml_string(name)}')
+        frontmatter_lines.append(f"    hlsUrl: {R2_BASE_URL}/video/{group_name_encoded}/{post_title_encoded}/{hls_path_encoded}")
+    
+    frontmatter_lines.append("---")
+    frontmatter_lines.append("")
+    
+    # 构建正文内容
+    body_content = ""
+    if post_metadata and post_metadata.get("description"):
+        body_content += f"{post_metadata.get('description')}\n"
+    body_content += "\n"
+    
+    content = "\n".join(frontmatter_lines) + body_content
     
     with open(md_file, 'w', encoding='utf-8') as f:
         f.write(content)

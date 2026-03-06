@@ -47,6 +47,20 @@ def sanitize_slug(name):
     
     return slug
 
+def escape_yaml_string(value):
+    """转义 YAML 字符串，处理特殊字符"""
+    if not isinstance(value, str):
+        return str(value)
+    
+    # YAML 中需要引号包裹的特殊字符
+    special_chars = [':', '{', '}', '[', ']', ',', '&', '*', '#', '?', '|', '-', '<', '>', '=', '!', '%', '@', '\\', '"', "'", '\n']
+    
+    if any(c in value for c in special_chars):
+        # 双引号需要转义
+        escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+        return f'"{escaped}"'
+    return value
+
 def load_metadata(folder_name):
     """Load metadata from post_metadata.json if exists (from original image folder)"""
     metadata_path = os.path.join(IMAGE_ORIGINAL_PATH, folder_name, 'post_metadata.json')
@@ -81,9 +95,6 @@ def generate_markdown(folder_name, webp_files):
     # Use first image as cover
     cover_url = f"{R2_BASE_URL}/image/{slug_encoded}/{quote(webp_files[0], safe='')}"
     
-    # Generate tags YAML
-    tags_yaml = "\n".join([f"- {tag}" for tag in tags])
-    
     # 构建正文内容
     # 1. 添加图片（每张图片单独一行，使用 markdown 图片语法）
     body_content = ""
@@ -95,21 +106,54 @@ def generate_markdown(folder_name, webp_files):
     if description:
         body_content += f"{description}\n\n"
     
-    # Generate frontmatter
-    frontmatter = f"""---
-category:
-- {category}
-cover: {cover_url}
-coverAlt: {folder_name}
-description: {folder_name} - {len(webp_files)}张图片
-pubDate: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-slug: {slug}
-tags:
-{tags_yaml}
-title: {folder_name}
----
-
-"""
+    # 使用 yaml 库安全地生成 frontmatter
+    frontmatter_data = {
+        'category': [category],
+        'cover': cover_url,
+        'coverAlt': folder_name,
+        'description': f"{folder_name} - {len(webp_files)}张图片",
+        'pubDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'slug': slug,
+        'tags': tags,
+        'title': folder_name
+    }
+    
+    # 手动构建 frontmatter，确保 pubDate 不被引号包裹
+    frontmatter_lines = ["---"]
+    
+    # category
+    frontmatter_lines.append("category:")
+    for cat in frontmatter_data['category']:
+        frontmatter_lines.append(f"- {escape_yaml_string(cat)}")
+    
+    # cover
+    frontmatter_lines.append(f"cover: {frontmatter_data['cover']}")
+    
+    # coverAlt
+    frontmatter_lines.append(f"coverAlt: {escape_yaml_string(frontmatter_data['coverAlt'])}")
+    
+    # description
+    frontmatter_lines.append(f"description: {escape_yaml_string(frontmatter_data['description'])}")
+    
+    # pubDate - 不添加引号
+    frontmatter_lines.append(f"pubDate: {frontmatter_data['pubDate']}")
+    
+    # slug
+    frontmatter_lines.append(f"slug: {frontmatter_data['slug']}")
+    
+    # tags
+    frontmatter_lines.append("tags:")
+    for tag in frontmatter_data['tags']:
+        frontmatter_lines.append(f"- {escape_yaml_string(tag)}")
+    
+    # title
+    frontmatter_lines.append(f"title: {escape_yaml_string(frontmatter_data['title'])}")
+    
+    frontmatter_lines.append("---")
+    frontmatter_lines.append("")
+    frontmatter_lines.append("")
+    
+    frontmatter = "\n".join(frontmatter_lines)
     
     # 返回 frontmatter + 正文内容
     return frontmatter + body_content
