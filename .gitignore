@@ -57,12 +57,18 @@ Image/**/*.jpeg
 Image/**/*.png
 Image/**/*.gif
 Image/**/*.webp
+Image/**/*.mp4
+Image/**/*.mov
+Image/**/*.avi
 Image-1/**/*.webp
 video/**/*.mp4
 video/**/*.mov
 video/**/*.avi
 video-1/**/*.ts
 video-1/**/*.m3u8
+
+# Root level video files
+playlist.m3u8
 
 # Backup files
 *.bak

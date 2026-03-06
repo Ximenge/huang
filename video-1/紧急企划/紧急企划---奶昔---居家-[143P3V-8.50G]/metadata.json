@@ -1,0 +1,41 @@
+{
+  "group_name": "紧急企划",
+  "post_title": "紧急企划 - 奶昔 - 居家 [143P3V-8.50G]",
+  "video_count": 3,
+  "videos": [
+    {
+      "name": "0 (1)",
+      "original_file": "0 (1).mp4",
+      "size": 3544416063,
+      "duration": 2065.22,
+      "width": 3840,
+      "height": 2160,
+      "codec": "h264",
+      "audio_bit_rate": 128684,
+      "hls_playlist": "0 (1)/playlist.m3u8"
+    },
+    {
+      "name": "0 (2)",
+      "original_file": "0 (2).mp4",
+      "size": 28933935,
+      "duration": 12.88,
+      "width": 3840,
+      "height": 2160,
+      "codec": "h264",
+      "audio_bit_rate": 2099,
+      "hls_playlist": "0 (2)/playlist.m3u8"
+    },
+    {
+      "name": "0 (3)",
+      "original_file": "0 (3).mp4",
+      "size": 3640925627,
+      "duration": 1984.3824,
+      "width": 3840,
+      "height": 2160,
+      "codec": "h264",
+      "audio_bit_rate": 114606,
+      "hls_playlist": "0 (3)/playlist.m3u8"
+    }
+  ],
+  "cover": "0 (1)_cover.jpg"
+}

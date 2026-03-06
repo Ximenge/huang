@@ -122,11 +122,36 @@ def get_video_info(video_path):
                     video_info["width"] = stream.get('width')
                     video_info["height"] = stream.get('height')
                     video_info["codec"] = stream.get('codec_name')
-                    break
+                elif stream.get('codec_type') == 'audio':
+                    # 获取音频码率
+                    bit_rate = stream.get('bit_rate')
+                    if bit_rate:
+                        video_info["audio_bit_rate"] = int(bit_rate)
     except Exception:
         pass
     
     return video_info
+
+
+def get_audio_bitrate(video_path):
+    """获取视频文件的音频码率（bps），如果获取失败返回None"""
+    try:
+        cmd = [
+            'ffprobe',
+            '-v', 'quiet',
+            '-select_streams', 'a:0',
+            '-show_entries', 'stream=bit_rate',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            str(video_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+        if result.returncode == 0:
+            bit_rate_str = result.stdout.strip()
+            if bit_rate_str and bit_rate_str.isdigit():
+                return int(bit_rate_str)
+    except Exception:
+        pass
+    return None
 
 
 def process_video_to_hls(input_path, output_folder, segment_duration=10):
@@ -155,12 +180,27 @@ def process_video_to_hls(input_path, output_folder, segment_duration=10):
         
         print(f"        正在处理: {os.path.basename(input_path)}")
         
+        # 获取原始音频码率
+        original_audio_bitrate = get_audio_bitrate(input_path)
+        
+        # 设置音频码率：使用原始码率，但最高不超过320kbps
+        if original_audio_bitrate:
+            # 将bps转换为kbps，并限制最大320kbps
+            audio_kbps = min(original_audio_bitrate // 1000, 320)
+            # 确保最低128kbps（保证基本质量）
+            audio_kbps = max(audio_kbps, 128)
+            print(f"        原始音频码率: {original_audio_bitrate // 1000}kbps, 使用: {audio_kbps}kbps")
+        else:
+            audio_kbps = 192  # 默认码率
+            print(f"        无法获取原始音频码率, 使用默认: {audio_kbps}kbps")
+        
         cmd = [
             'ffmpeg',
             '-i', str(input_path),
             '-c:v', 'libx264',
             '-b:v', '1000k',
             '-c:a', 'aac',
+            '-b:a', f'{audio_kbps}k',
             '-vf', 'scale=-2:1080',
             '-f', 'hls',
             '-hls_time', str(segment_duration),
