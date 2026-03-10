@@ -1,0 +1,52 @@
+{
+  "group_name": "老虎菜系列-回归",
+  "post_title": "老虎菜-线上开发06年高三复读生处女-无美颜无滤镜，这种身材，配得上完美二字--带聊天记录",
+  "video_count": 4,
+  "videos": [
+    {
+      "name": "1",
+      "original_file": "1.mp4",
+      "size": 665545497,
+      "duration": 720.166893,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 192088,
+      "hls_playlist": "1/playlist.m3u8"
+    },
+    {
+      "name": "2",
+      "original_file": "2.mp4",
+      "size": 836353247,
+      "duration": 900.191202,
+      "width": 1080,
+      "height": 1920,
+      "codec": "hevc",
+      "audio_bit_rate": 192135,
+      "hls_playlist": "2/playlist.m3u8"
+    },
+    {
+      "name": "3",
+      "original_file": "3.mp4",
+      "size": 782123874,
+      "duration": 847.667664,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 192167,
+      "hls_playlist": "3/playlist.m3u8"
+    },
+    {
+      "name": "4",
+      "original_file": "4.mp4",
+      "size": 332803375,
+      "duration": 360.095057,
+      "width": 1080,
+      "height": 1920,
+      "codec": "hevc",
+      "audio_bit_rate": 192037,
+      "hls_playlist": "4/playlist.m3u8"
+    }
+  ],
+  "cover": "1_cover.jpg"
+}

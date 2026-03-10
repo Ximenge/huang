@@ -1,0 +1,52 @@
+{
+  "group_name": "老虎菜系列-回归",
+  "post_title": "老虎菜-甜妹天花板",
+  "video_count": 4,
+  "videos": [
+    {
+      "name": "1",
+      "original_file": "1.mp4",
+      "size": 370458421,
+      "duration": 399.870839,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 194560,
+      "hls_playlist": "1/playlist.m3u8"
+    },
+    {
+      "name": "2",
+      "original_file": "2.mp4",
+      "size": 665015856,
+      "duration": 721.490431,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 194072,
+      "hls_playlist": "2/playlist.m3u8"
+    },
+    {
+      "name": "3",
+      "original_file": "3.mp4",
+      "size": 415979493,
+      "duration": 449.259683,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 195283,
+      "hls_playlist": "3/playlist.m3u8"
+    },
+    {
+      "name": "4",
+      "original_file": "4.mp4",
+      "size": 333556041,
+      "duration": 360.977415,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 195951,
+      "hls_playlist": "4/playlist.m3u8"
+    }
+  ],
+  "cover": "1_cover.jpg"
+}

@@ -1,0 +1,107 @@
+{
+  "group_name": "老虎菜系列-回归",
+  "post_title": "老虎菜 - 捕获有男朋友的野生女大",
+  "video_count": 9,
+  "videos": [
+    {
+      "name": "1",
+      "original_file": "1.mp4",
+      "size": 776682704,
+      "duration": 624.361361,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "audio_bit_rate": 193697,
+      "hls_playlist": "1/playlist.m3u8"
+    },
+    {
+      "name": "2",
+      "original_file": "2.mp4",
+      "size": 355016580,
+      "duration": 286.279002,
+      "width": 1080,
+      "height": 1920,
+      "codec": "h264",
+      "audio_bit_rate": 193309,
+      "hls_playlist": "2/playlist.m3u8"
+    },
+    {
+      "name": "3",
+      "original_file": "3.mp4",
+      "size": 490898671,
+      "duration": 394.623129,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "audio_bit_rate": 194173,
+      "hls_playlist": "3/playlist.m3u8"
+    },
+    {
+      "name": "4",
+      "original_file": "4.mp4",
+      "size": 169692587,
+      "duration": 136.463673,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "audio_bit_rate": 192343,
+      "hls_playlist": "4/playlist.m3u8"
+    },
+    {
+      "name": "5",
+      "original_file": "5.mp4",
+      "size": 276943209,
+      "duration": 222.400998,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "audio_bit_rate": 193814,
+      "hls_playlist": "5/playlist.m3u8"
+    },
+    {
+      "name": "6",
+      "original_file": "6.mp4",
+      "size": 341139468,
+      "duration": 274.692063,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "audio_bit_rate": 193858,
+      "hls_playlist": "6/playlist.m3u8"
+    },
+    {
+      "name": "7",
+      "original_file": "7.mp4",
+      "size": 49644257,
+      "duration": 39.52,
+      "width": 1080,
+      "height": 1440,
+      "codec": "h264",
+      "audio_bit_rate": 192480,
+      "hls_playlist": "7/playlist.m3u8"
+    },
+    {
+      "name": "8",
+      "original_file": "8.mp4",
+      "size": 101052655,
+      "duration": 80.851995,
+      "width": 1080,
+      "height": 1920,
+      "codec": "h264",
+      "audio_bit_rate": 198288,
+      "hls_playlist": "8/playlist.m3u8"
+    },
+    {
+      "name": "9",
+      "original_file": "9.mp4",
+      "size": 189213388,
+      "duration": 152.160363,
+      "width": 1920,
+      "height": 1080,
+      "codec": "h264",
+      "audio_bit_rate": 198070,
+      "hls_playlist": "9/playlist.m3u8"
+    }
+  ],
+  "cover": "1_cover.jpg"
+}

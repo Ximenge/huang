@@ -37,7 +37,7 @@ def add_conversion_record(record, dir_path, converted_count, target_dir):
         "timestamp": os.path.getmtime(dir_path) if os.path.exists(dir_path) else None
     }
 
-def convert_to_webp_with_size_limit(input_path, max_size_kb=200, dpi=72, min_quality=50, max_resolution=1440, output_filename=None):
+def convert_to_webp_with_size_limit(input_path, max_size_kb=200, dpi=72, min_quality=50, max_resolution=1440, output_filename=None, folder_name=None):
     """将图片转换为webp格式，优先保持比例和分辨率
     
     Args:
@@ -47,8 +47,13 @@ def convert_to_webp_with_size_limit(input_path, max_size_kb=200, dpi=72, min_qua
         min_quality: 最低WebP质量，默认50
         max_resolution: 最大分辨率（长或宽），默认1440
         output_filename: 输出文件名（可选）
+        folder_name: 文件夹名称（可选）
     """
     try:
+        if folder_name:
+            print(f"\n正在转换文件夹: {folder_name}")
+            print(f"  处理图片: {os.path.basename(input_path)}")
+        
         img = Image.open(input_path)
         original_width, original_height = img.size
         original_ratio = original_width / original_height if original_height > 0 else 1
@@ -266,6 +271,7 @@ def batch_convert(directory, record=None, max_size_kb=200, dpi=72, max_resolutio
         image_files.sort(key=natural_sort_key)
         
         dir_converted_count = 0
+        folder_name = os.path.basename(root)
         for i, file in enumerate(image_files, 1):
             total_files += 1
             input_path = os.path.join(root, file)
@@ -276,7 +282,7 @@ def batch_convert(directory, record=None, max_size_kb=200, dpi=72, max_resolutio
             original_size = os.path.getsize(input_path) / 1024
             total_original_size += original_size
             
-            if convert_to_webp_with_size_limit(input_path, max_size_kb=max_size_kb, dpi=dpi, max_resolution=max_resolution, output_filename=output_filename):
+            if convert_to_webp_with_size_limit(input_path, max_size_kb=max_size_kb, dpi=dpi, max_resolution=max_resolution, output_filename=output_filename, folder_name=folder_name):
                 converted_files += 1
                 dir_converted_count += 1
                 

@@ -1,0 +1,41 @@
+{
+  "group_name": "老虎菜系列-回归",
+  "post_title": "老虎菜-苦等两个月终于分手-我愿称之为第一骚",
+  "video_count": 3,
+  "videos": [
+    {
+      "name": "1",
+      "original_file": "1.mp4",
+      "size": 701861679,
+      "duration": 762.545011,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 194784,
+      "hls_playlist": "1/playlist.m3u8"
+    },
+    {
+      "name": "2",
+      "original_file": "2.mp4",
+      "size": 531012138,
+      "duration": 580.731066,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 193996,
+      "hls_playlist": "2/playlist.m3u8"
+    },
+    {
+      "name": "3",
+      "original_file": "3.mp4",
+      "size": 625510742,
+      "duration": 680.135692,
+      "width": 1920,
+      "height": 1080,
+      "codec": "hevc",
+      "audio_bit_rate": 197943,
+      "hls_playlist": "3/playlist.m3u8"
+    }
+  ],
+  "cover": "1_cover.jpg"
+}

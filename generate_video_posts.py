@@ -187,7 +187,7 @@ def generate_md_file(group_name, post_title, metadata, post_metadata=None):
     group_name_encoded = quote(group_name, safe='')
     post_title_encoded = quote(post_title, safe='')
     
-    pub_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    pub_date = datetime.now().strftime("%Y-%m-%d")
     
     # Default values
     category = "Video"
@@ -202,7 +202,7 @@ def generate_md_file(group_name, post_title, metadata, post_metadata=None):
     frontmatter_lines.append(f"title: {escape_yaml_string(post_title)}")
     frontmatter_lines.append(f"series: {escape_yaml_string(group_name)}")
     frontmatter_lines.append(f"description: {escape_yaml_string(f'{post_title} - {video_count}个视频')}")
-    frontmatter_lines.append(f"pubDate: {pub_date}")
+    frontmatter_lines.append(f"pubDate: \"{pub_date}\"")
     
     # 处理封面
     cover = metadata.get("cover")
@@ -226,9 +226,10 @@ def generate_md_file(group_name, post_title, metadata, post_metadata=None):
     frontmatter_lines.append("videos:")
     for video in videos:
         hls_path = video.get("hls_playlist", "")
-        name = video.get("name", "")
+        name = str(video.get("name", ""))  # 确保name是字符串类型
         hls_path_encoded = quote(hls_path, safe='/')
-        frontmatter_lines.append(f'  - name: {escape_yaml_string(name)}')
+        # 确保name作为字符串输出到YAML，即使它看起来像数字
+        frontmatter_lines.append(f'  - name: "{name}"')
         frontmatter_lines.append(f"    hlsUrl: {R2_BASE_URL}/video/{group_name_encoded}/{post_title_encoded}/{hls_path_encoded}")
     
     frontmatter_lines.append("---")
