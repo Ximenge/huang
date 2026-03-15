@@ -52,11 +52,11 @@ def escape_yaml_string(value):
     if not isinstance(value, str):
         return str(value)
     
-    # YAML 中需要引号包裹的特殊字符
-    special_chars = [':', '{', '}', '[', ']', ',', '&', '*', '#', '?', '|', '-', '<', '>', '=', '!', '%', '@', '\\', '"', "'", '\n']
+    # 检查是否需要引号：如果包含冒号、换行、引号等特殊字符，需要用引号包裹
+    needs_quotes = any(c in value for c in [':', '{', '}', '[', ']', ',', '&', '*', '#', '?', '|', '-', '<', '>', '=', '!', '%', '@', '\n', '"', "'"])
     
-    if any(c in value for c in special_chars):
-        # 双引号需要转义
+    if needs_quotes:
+        # 用双引号包裹，内部的双引号和反斜杠需要转义
         escaped = value.replace('\\', '\\\\').replace('"', '\\"')
         return f'"{escaped}"'
     return value
@@ -107,35 +107,36 @@ def generate_markdown(folder_name, webp_files):
         body_content += f"{description}\n\n"
     
     # 使用 yaml 库安全地生成 frontmatter
+    # pubDate 使用日期格式 (z.date() 期望 YYYY-MM-DD 格式)
     frontmatter_data = {
         'category': [category],
         'cover': cover_url,
         'coverAlt': folder_name,
         'description': f"{folder_name} - {len(webp_files)}张图片",
-        'pubDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'pubDate': datetime.now().strftime('%Y-%m-%d'),
         'slug': slug,
         'tags': tags,
         'title': folder_name
     }
     
-    # 手动构建 frontmatter，确保 pubDate 不被引号包裹
+    # 手动构建 frontmatter
     frontmatter_lines = ["---"]
     
     # category
     frontmatter_lines.append("category:")
     for cat in frontmatter_data['category']:
-        frontmatter_lines.append(f"- {escape_yaml_string(cat)}")
+        frontmatter_lines.append(f"  - {escape_yaml_string(cat)}")
     
-    # cover
+    # cover - 确保 URL 不包含需要转义的字符，直接写入
     frontmatter_lines.append(f"cover: {frontmatter_data['cover']}")
     
-    # coverAlt
+    # coverAlt - 需要检查是否包含特殊字符
     frontmatter_lines.append(f"coverAlt: {escape_yaml_string(frontmatter_data['coverAlt'])}")
     
     # description
     frontmatter_lines.append(f"description: {escape_yaml_string(frontmatter_data['description'])}")
     
-    # pubDate - 不添加引号
+    # pubDate - 使用日期格式，不包含时间
     frontmatter_lines.append(f"pubDate: {frontmatter_data['pubDate']}")
     
     # slug
@@ -144,7 +145,7 @@ def generate_markdown(folder_name, webp_files):
     # tags
     frontmatter_lines.append("tags:")
     for tag in frontmatter_data['tags']:
-        frontmatter_lines.append(f"- {escape_yaml_string(tag)}")
+        frontmatter_lines.append(f"  - {escape_yaml_string(tag)}")
     
     # title
     frontmatter_lines.append(f"title: {escape_yaml_string(frontmatter_data['title'])}")

@@ -7,6 +7,7 @@ from pathlib import Path
 REMOTE_NAME = "small"
 BASE_REMOTE_PATH = "small/image"
 LOCAL_PATH = r"C:\huang\Image-1"
+MAX_RETRY_ATTEMPTS = 2  # 最大重试次数（包括第一次）
 
 # Color codes for terminal output
 class Colors:
@@ -64,14 +65,14 @@ def test_local_directory(dir_path):
     """Check if local directory exists"""
     return os.path.isdir(dir_path)
 
-def upload_directory(local_dir, remote_dir):
+def upload_directory(local_dir, remote_dir, attempt=1):
     """Upload directory to R2"""
     local_full_path = os.path.join(LOCAL_PATH, local_dir)
     remote_full_path = f"{BASE_REMOTE_PATH}/{remote_dir}"
     
     print_color("", Colors.RESET)
     print_color("----------------------------------------", Colors.GREEN)
-    print_color(f"Uploading: {local_dir} -> {remote_dir}", Colors.GREEN)
+    print_color(f"Uploading: {local_dir} -> {remote_dir} (Attempt {attempt}/{MAX_RETRY_ATTEMPTS})", Colors.GREEN)
     print_color("----------------------------------------", Colors.GREEN)
     
     try:
@@ -89,12 +90,17 @@ def upload_directory(local_dir, remote_dir):
             return True
         else:
             print_color(f"[FAIL] Upload failed: {local_dir}", Colors.RED)
+            if result.stderr:
+                print_color(f"  Error: {result.stderr[:200]}", Colors.RED)
             return False
     except Exception as e:
         print_color(f"[ERROR] Upload exception: {local_dir} - {str(e)}", Colors.RED)
         return False
 
 def main():
+    failed_folders = []  # 记录上传失败的文件夹
+    success_folders = []  # 记录上传成功的文件夹
+    
     try:
         print_color("========================================", Colors.CYAN)
         print_color("R2 Auto Upload Script", Colors.CYAN)
@@ -142,12 +148,55 @@ def main():
                 skip_count += 1
                 continue
             
-            # Upload directory
-            success = upload_directory(local_dir_name, remote_dir_name)
+            # Upload directory with retry
+            success = False
+            for attempt in range(1, MAX_RETRY_ATTEMPTS + 1):
+                success = upload_directory(local_dir_name, remote_dir_name, attempt)
+                if success:
+                    break
+                elif attempt < MAX_RETRY_ATTEMPTS:
+                    print_color(f"  [RETRY] Retrying upload... (Attempt {attempt + 1}/{MAX_RETRY_ATTEMPTS})", Colors.YELLOW)
+            
             if success:
                 upload_count += 1
+                success_folders.append(local_dir_name)
             else:
                 fail_count += 1
+                failed_folders.append(local_dir_name)
+        
+        # 如果有失败的文件夹，进行第二轮重试
+        if failed_folders:
+            print_color("", Colors.RESET)
+            print_color("========================================", Colors.YELLOW)
+            print_color(f"Retrying {len(failed_folders)} failed folders...", Colors.YELLOW)
+            print_color("========================================", Colors.YELLOW)
+            print_color("", Colors.RESET)
+            
+            # 刷新远程目录列表
+            remote_dirs = get_remote_directories(BASE_REMOTE_PATH)
+            
+            still_failed = []
+            for local_dir_name in failed_folders:
+                remote_dir_name = convert_folder_name(local_dir_name)
+                
+                # 检查是否已经上传成功（可能在之前的重试中成功了）
+                if test_remote_directory_exists(remote_dirs, remote_dir_name):
+                    print_color(f"  [OK] Folder already uploaded in previous attempt: {local_dir_name}", Colors.GREEN)
+                    success_folders.append(local_dir_name)
+                    fail_count -= 1
+                    upload_count += 1
+                    continue
+                
+                # 再次尝试上传
+                success = upload_directory(local_dir_name, remote_dir_name, 1)
+                if success:
+                    success_folders.append(local_dir_name)
+                    fail_count -= 1
+                    upload_count += 1
+                else:
+                    still_failed.append(local_dir_name)
+            
+            failed_folders = still_failed
         
         # Output summary
         print_color("", Colors.RESET)
@@ -158,6 +207,24 @@ def main():
         print_color(f"Skipped (already exists): {skip_count} folders", Colors.YELLOW)
         print_color(f"Failed: {fail_count} folders", Colors.RED)
         print_color("", Colors.RESET)
+        
+        # 显示上传成功的文件夹列表
+        if success_folders:
+            print_color("========================================", Colors.GREEN)
+            print_color("Successfully uploaded folders:", Colors.GREEN)
+            print_color("========================================", Colors.GREEN)
+            for folder in success_folders:
+                print_color(f"  ✓ {folder}", Colors.GREEN)
+            print_color("", Colors.RESET)
+        
+        # 显示上传失败的文件夹列表
+        if failed_folders:
+            print_color("========================================", Colors.RED)
+            print_color("Failed folders:", Colors.RED)
+            print_color("========================================", Colors.RED)
+            for folder in failed_folders:
+                print_color(f"  ✗ {folder}", Colors.RED)
+            print_color("", Colors.RESET)
         
         # Display current remote directory status
         print_color("Current remote directory list:", Colors.CYAN)
