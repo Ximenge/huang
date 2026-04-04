@@ -5,12 +5,22 @@ import json
 from urllib.parse import quote
 import re
 from pypinyin import lazy_pinyin
+import requests
 
 # Configuration
 IMAGE_ORIGINAL_PATH = r"C:\huang\image"
 IMAGE_1_PATH = r"C:\huang\Image-1"
 ASTRO_POSTS_PATH = r"C:\huang\astro-melody-starter\src\content\posts"
 R2_BASE_URL = "https://image.91tutu.cc"
+
+# IndexNow Configuration
+INDEXNOW_KEY = "de748853d6e24417b898bb2b3d2c62d8"
+INDEXNOW_HOST = "91tutu.cc"
+INDEXNOW_SITE_URL = "https://91tutu.cc"
+INDEXNOW_ENDPOINTS = [
+    "https://www.bing.com/indexnow",
+    "https://yandex.com/indexnow",
+]
 
 # Excluded files and directories
 EXCLUDED_NAMES = {'conversion_record.json', 'upload_to_r2.ps1', 'upload_to_r2.py', 'convert_to_webp.py', 'convert_to_webp.bat', 'README_upload_script.md', 'ceshi.txt', 'files.txt'}
@@ -107,13 +117,13 @@ def generate_markdown(folder_name, webp_files):
         body_content += f"{description}\n\n"
     
     # 使用 yaml 库安全地生成 frontmatter
-    # pubDate 使用日期格式 (z.date() 期望 YYYY-MM-DD 格式)
+    # pubDate 使用完整时间戳格式，确保每次生成的文章都有唯一的时间戳
     frontmatter_data = {
         'category': [category],
         'cover': cover_url,
         'coverAlt': folder_name,
         'description': f"{folder_name} - {len(webp_files)}张图片",
-        'pubDate': datetime.now().strftime('%Y-%m-%d'),
+        'pubDate': datetime.now().strftime('%Y-%m-%dT%H:%M:%S'),
         'slug': slug,
         'tags': tags,
         'title': folder_name
@@ -136,7 +146,7 @@ def generate_markdown(folder_name, webp_files):
     # description
     frontmatter_lines.append(f"description: {escape_yaml_string(frontmatter_data['description'])}")
     
-    # pubDate - 使用日期格式，不包含时间
+    # pubDate - 使用完整时间戳格式
     frontmatter_lines.append(f"pubDate: {frontmatter_data['pubDate']}")
     
     # slug
@@ -159,6 +169,34 @@ def generate_markdown(folder_name, webp_files):
     # 返回 frontmatter + 正文内容
     return frontmatter + body_content
 
+def notify_indexnow(urls):
+    """Notify IndexNow about new URLs"""
+    if not urls:
+        return
+    
+    print("\n========================================")
+    print("Notifying IndexNow...")
+    print("========================================")
+    
+    payload = {
+        "host": INDEXNOW_HOST,
+        "key": INDEXNOW_KEY,
+        "urlList": urls
+    }
+    
+    for endpoint in INDEXNOW_ENDPOINTS:
+        try:
+            response = requests.post(
+                endpoint,
+                json=payload,
+                headers={"Content-Type": "application/json; charset=utf-8"},
+                timeout=30
+            )
+            status = "✓" if response.status_code in [200, 202] else "✗"
+            print(f"{status} {endpoint}: HTTP {response.status_code}")
+        except Exception as e:
+            print(f"✗ {endpoint}: {e}")
+
 def main():
     print("========================================")
     print("Markdown Generator for Astro Posts")
@@ -177,6 +215,7 @@ def main():
     # Process each folder
     generated_count = 0
     skipped_count = 0
+    generated_urls = []
     
     for folder in folders:
         folder_name = folder.name
@@ -212,6 +251,7 @@ def main():
                 f.write(markdown_content)
             print(f"  [OK] Generated: {md_filename}")
             generated_count += 1
+            generated_urls.append(f"{INDEXNOW_SITE_URL}/posts/{slug}/")
         except Exception as e:
             print(f"  [ERROR] Failed to write {md_filename}: {str(e)}")
         
@@ -224,6 +264,11 @@ def main():
     print(f"Successfully generated: {generated_count} markdown files")
     print(f"Skipped: {skipped_count} folders")
     print()
+    
+    # Notify IndexNow about new URLs
+    if generated_urls:
+        notify_indexnow(generated_urls)
+        print(f"\nNotified IndexNow about {len(generated_urls)} new URLs")
 
 if __name__ == "__main__":
     main()
