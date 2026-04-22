@@ -2,12 +2,14 @@ import os
 import subprocess
 import re
 from pathlib import Path
+from datetime import datetime
 
 # Configuration
 REMOTE_NAME = "small"
 BASE_REMOTE_PATH = "small/image"
 LOCAL_PATH = r"C:\huang\Image-1"
 MAX_RETRY_ATTEMPTS = 2  # 最大重试次数（包括第一次）
+UPLOAD_LOG_FILE = os.path.join(LOCAL_PATH, "upload_log.md")
 
 # Color codes for terminal output
 class Colors:
@@ -21,9 +23,45 @@ class Colors:
 def print_color(message, color=Colors.RESET):
     print(f"{color}{message}{Colors.RESET}")
 
+def init_upload_log():
+    """Initialize upload log file if it doesn't exist"""
+    if not os.path.exists(UPLOAD_LOG_FILE):
+        with open(UPLOAD_LOG_FILE, 'w', encoding='utf-8') as f:
+            f.write("# 上传日志\n\n")
+            f.write("本文件记录图片上传到 R2 的详细信息\n\n")
+        print_color(f"Created upload log file: {UPLOAD_LOG_FILE}", Colors.GREEN)
+    else:
+        print_color(f"Using existing upload log file: {UPLOAD_LOG_FILE}", Colors.YELLOW)
+
 def convert_folder_name(folder_name):
     """Convert folder name (keep original)"""
     return folder_name
+
+def log_upload_info(folder_name, files_info, success, start_time, end_time):
+    """Log upload information to MD file"""
+    with open(UPLOAD_LOG_FILE, 'a', encoding='utf-8') as f:
+        # 文件夹信息
+        status = "成功" if success else "失败"
+        f.write(f"## {folder_name}\n")
+        f.write(f"- 上传状态: **{status}**\n")
+        f.write(f"- 开始时间: {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- 结束时间: {end_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"- 上传到: {BASE_REMOTE_PATH}/{folder_name}\n")
+        
+        # 文件列表
+        if files_info:
+            f.write("\n### 文件列表\n")
+            f.write("| 来源路径 | 文件名 | 上传时间 | 状态 |\n")
+            f.write("|---------|-------|---------|------|\n")
+            
+            for file_info in files_info:
+                file_status = "成功" if file_info['success'] else "失败"
+                f.write(f"| {file_info['source_path']} | {file_info['filename']} | {file_info['upload_time'].strftime('%Y-%m-%d %H:%M:%S')} | {file_status} |\n")
+        else:
+            f.write("\n### 文件列表\n")
+            f.write("- 无文件\n")
+        
+        f.write("\n")
 
 def test_remote_directory_exists(remote_dirs, target_dir):
     """Check if remote directory exists"""
@@ -75,6 +113,22 @@ def upload_directory(local_dir, remote_dir, attempt=1):
     print_color(f"Uploading: {local_dir} -> {remote_dir} (Attempt {attempt}/{MAX_RETRY_ATTEMPTS})", Colors.GREEN)
     print_color("----------------------------------------", Colors.GREEN)
     
+    # 收集文件信息
+    files_info = []
+    start_time = datetime.now()
+    
+    # 遍历目录中的所有文件
+    for root, dirs, files in os.walk(local_full_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            relative_path = os.path.relpath(file_path, LOCAL_PATH)
+            files_info.append({
+                'source_path': relative_path,
+                'filename': file,
+                'upload_time': start_time,
+                'success': False
+            })
+    
     try:
         result = subprocess.run(
             ['rclone', 'copy', local_full_path, f'{REMOTE_NAME}:{remote_full_path}', '--progress'],
@@ -85,7 +139,17 @@ def upload_directory(local_dir, remote_dir, attempt=1):
             shell=True
         )
         
-        if result.returncode == 0:
+        end_time = datetime.now()
+        success = result.returncode == 0
+        
+        # 更新文件状态
+        for file_info in files_info:
+            file_info['success'] = success
+        
+        # 记录上传信息
+        log_upload_info(local_dir, files_info, success, start_time, end_time)
+        
+        if success:
             print_color(f"[OK] Upload success: {local_dir}", Colors.GREEN)
             return True
         else:
@@ -94,6 +158,9 @@ def upload_directory(local_dir, remote_dir, attempt=1):
                 print_color(f"  Error: {result.stderr[:200]}", Colors.RED)
             return False
     except Exception as e:
+        end_time = datetime.now()
+        # 记录上传信息（失败）
+        log_upload_info(local_dir, files_info, False, start_time, end_time)
         print_color(f"[ERROR] Upload exception: {local_dir} - {str(e)}", Colors.RED)
         return False
 
@@ -105,6 +172,10 @@ def main():
         print_color("========================================", Colors.CYAN)
         print_color("R2 Auto Upload Script", Colors.CYAN)
         print_color("========================================", Colors.CYAN)
+        print_color("", Colors.RESET)
+        
+        # 初始化上传日志文件
+        init_upload_log()
         print_color("", Colors.RESET)
         
         # Get existing remote directories

@@ -1,0 +1,33 @@
+[
+  {
+    "name": "紧急企划",
+    "description": "紧急企划系列视频",
+    "slug": "紧急企划",
+    "videos": [
+      {
+        "title": "紧急企划 - 测试视频1",
+        "description": "紧急企划系列第一个测试视频",
+        "slug": "test-video-1",
+        "hlsUrl": "https://pub-58906530c3a643c1b5d1101b21b03114.r2.dev/videos/IMG_2337/playlist.m3u8",
+        "duration": 18.645624,
+        "size": 3383447
+      },
+      {
+        "title": "紧急企划 - 测试视频2",
+        "description": "紧急企划系列第二个测试视频",
+        "slug": "test-video-2",
+        "hlsUrl": "https://pub-58906530c3a643c1b5d1101b21b03114.r2.dev/videos/test-video-2/playlist.m3u8",
+        "duration": 0,
+        "size": 0
+      },
+      {
+        "title": "紧急企划 - 测试视频3",
+        "description": "紧急企划系列第三个测试视频",
+        "slug": "test-video-3",
+        "hlsUrl": "https://pub-58906530c3a643c1b5d1101b21b03114.r2.dev/videos/test-video-3/playlist.m3u8",
+        "duration": 0,
+        "size": 0
+      }
+    ]
+  }
+]

@@ -1,0 +1,185 @@
+---
+---
+
+<div class="not-prose bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-600 rounded-lg p-4 my-4">
+  <div class="flex items-center gap-3 flex-wrap">
+    点击这里直接下载压缩过的图包:
+    <button id="download-all-images" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors duration-200 cursor-pointer">
+      点击下载 ZIP
+    </button>
+    <span id="download-status" class="text-sm text-gray-600 dark:text-gray-400 ml-2"></span>
+  </div>
+</div>
+
+<script is:inline>
+  (function() {
+    function downloadAllImages() {
+      const statusElement = document.getElementById('download-status');
+      statusElement.textContent = '正在收集图片...';
+      
+      // 收集所有图片
+      const images = document.querySelectorAll('img');
+      const imageList = [];
+      
+      for (let i = 0; i < images.length; i++) {
+        const img = images[i];
+        if (img.src && 
+            !img.src.includes('data:image') && 
+            !img.src.includes('ads') && 
+            !img.src.includes('pagefind') &&
+            !img.src.includes('close-icon') &&
+            !img.src.includes('s3t3d2y1.afcdn.net')) {
+          imageList.push(img);
+        }
+      }
+      
+      if (imageList.length === 0) {
+        statusElement.textContent = '未找到可下载的图片';
+        return;
+      }
+      
+      statusElement.textContent = `找到 ${imageList.length} 张图片，正在处理...`;
+      console.log('找到的图片:', imageList.map(img => img.src));
+      
+      // 加载 JSZip
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+      script.onload = function() {
+        console.log('JSZip 加载成功');
+        const zip = new JSZip();
+        let completed = 0;
+        let successCount = 0;
+        
+        // 使用 Canvas 从已加载的图片中提取数据
+        imageList.forEach((img, index) => {
+          console.log(`处理第 ${index + 1} 张图片:`, img.src);
+          
+          try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 设置画布大小与图片一致
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            
+            // 绘制图片到画布
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // 将画布转换为 Blob
+            canvas.toBlob((blob) => {
+              if (blob) {
+                successCount++;
+                console.log(`第 ${index + 1} 张图片处理成功，大小: ${blob.size} bytes`);
+                const fileName = img.src.split('/').pop() || `image-${index + 1}.jpg`;
+                zip.file(`${String(index + 1).padStart(3, '0')}-${fileName}`, blob);
+              } else {
+                console.warn(`第 ${index + 1} 张图片转换失败:`, img.src);
+              }
+              
+              completed++;
+              statusElement.textContent = `正在处理 ${completed}/${imageList.length} 张图片...`;
+              console.log(`处理进度: ${completed}/${imageList.length}`);
+              
+              if (completed === imageList.length) {
+                console.log(`处理完成，成功: ${successCount}，失败: ${imageList.length - successCount}`);
+                
+                if (successCount === 0) {
+                  statusElement.textContent = '所有图片处理失败，请重试';
+                  return;
+                }
+                
+                statusElement.textContent = '正在生成 ZIP 文件...';
+                console.log('开始生成 ZIP 文件');
+                
+                // 生成并下载 ZIP
+                zip.generateAsync({ 
+                  type: 'blob',
+                  compression: 'DEFLATE',
+                  compressionOptions: { level: 6 }
+                })
+                .then(function(blob) {
+                  console.log('ZIP 生成成功，大小:', blob.size, 'bytes');
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = 'images.zip';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  
+                  if (successCount === imageList.length) {
+                    statusElement.textContent = '下载完成！';
+                  } else {
+                    statusElement.textContent = `下载完成（成功: ${successCount}/${imageList.length}）！`;
+                  }
+                  
+                  setTimeout(() => {
+                    statusElement.textContent = '';
+                  }, 3000);
+                })
+                .catch(function(error) {
+                  console.error('ZIP 生成失败:', error);
+                  statusElement.textContent = '下载失败，请重试';
+                });
+              }
+            }, 'image/jpeg', 0.9);
+          } catch (error) {
+            console.error(`第 ${index + 1} 张图片处理错误:`, img.src, error);
+            
+            completed++;
+            statusElement.textContent = `正在处理 ${completed}/${imageList.length} 张图片...`;
+            
+            if (completed === imageList.length) {
+              console.log(`处理完成，成功: ${successCount}，失败: ${imageList.length - successCount}`);
+              
+              if (successCount === 0) {
+                statusElement.textContent = '所有图片处理失败，请重试';
+                return;
+              }
+              
+              statusElement.textContent = '正在生成 ZIP 文件...';
+              
+              zip.generateAsync({ 
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 6 }
+              })
+              .then(function(blob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'images.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                statusElement.textContent = `下载完成（成功: ${successCount}/${imageList.length}）！`;
+                
+                setTimeout(() => {
+                  statusElement.textContent = '';
+                }, 3000);
+              })
+              .catch(function(error) {
+                console.error('ZIP 生成失败:', error);
+                statusElement.textContent = '下载失败，请重试';
+              });
+            }
+          }
+        });
+      };
+      
+      script.onerror = function() {
+        console.error('JSZip 加载失败');
+        statusElement.textContent = 'JSZip 加载失败，请重试';
+      };
+      
+      document.head.appendChild(script);
+    }
+    
+    // 绑定点击事件
+    document.addEventListener('DOMContentLoaded', function() {
+      const button = document.getElementById('download-all-images');
+      if (button) {
+        button.addEventListener('click', downloadAllImages);
+      }
+    });
+  })();
+</script>

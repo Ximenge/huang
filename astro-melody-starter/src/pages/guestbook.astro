@@ -1,0 +1,407 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+const pageTitle = "留言板";
+const pageDescription = "欢迎在留言板留下你的想法和建议";
+---
+
+<BaseLayout title={pageTitle} description={pageDescription}>
+  <div class="max-w-4xl mx-auto py-8">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">
+        📝 留言板
+      </h1>
+      <p class="text-neutral-600 dark:text-neutral-400">
+        欢迎在这里留下你的想法和建议
+      </p>
+    </div>
+
+    <div class="bg-base-200 rounded-xl p-6 shadow-sm mb-6">
+      <h2 class="text-xl font-bold mb-4 text-neutral-900 dark:text-neutral-100">
+        发表留言
+      </h2>
+      <form id="comment-form" class="space-y-4">
+        <div>
+          <label for="content" class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+            内容
+          </label>
+          <textarea
+            id="content"
+            name="content"
+            rows="4"
+            maxlength="500"
+            required
+            class="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-base-100 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            placeholder="写下你的留言..."
+          ></textarea>
+          <div class="text-xs text-neutral-500 mt-1">
+            <span id="char-count">0</span>/500
+          </div>
+        </div>
+        <button
+          type="submit"
+          id="submit-btn"
+          class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          提交留言
+        </button>
+      </form>
+      <div id="form-message" class="mt-4 text-sm hidden"></div>
+    </div>
+
+    <div class="bg-base-200 rounded-xl p-4 shadow-sm mb-6">
+      <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+        留言规则
+      </h3>
+      <ul class="text-xs text-neutral-600 dark:text-neutral-400 space-y-1">
+        <li>• 每分钟只能提交一条留言</li>
+        <li>• 内容长度 2-500 字</li>
+        <li>• 请文明发言，禁止刷屏</li>
+      </ul>
+    </div>
+
+    <div id="comments-list" class="space-y-4">
+      <div id="loading-indicator" class="text-center py-8 text-neutral-500">
+        <i class="icon-base icon-[tabler--loader] animate-spin text-2xl"></i>
+        <p class="mt-2">加载中...</p>
+      </div>
+    </div>
+    <div id="load-more-trigger" class="h-4"></div>
+  </div>
+</BaseLayout>
+
+<script>
+  interface Comment {
+    id: string;
+    nickname: string;
+    content: string;
+    timestamp: number;
+  }
+
+  interface Pagination {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  }
+
+  interface ApiResponse {
+    comments: Comment[];
+    pagination: Pagination;
+  }
+
+  let currentPage = 1;
+  let isLoading = false;
+  let hasMore = true;
+  let totalComments = 0;
+  const limit = 10;
+
+  function formatTimeAgo(timestamp: number): string {
+    const now = Date.now();
+    const diff = now - timestamp;
+    
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (seconds < 60) return '刚刚';
+    if (minutes < 60) return `${minutes}分钟前`;
+    if (hours < 24) return `${hours}小时前`;
+    if (days < 30) return `${days}天前`;
+    
+    return new Date(timestamp).toLocaleDateString('zh-CN');
+  }
+
+  function renderComment(comment: Comment, index: number): string {
+    return `
+      <div class="bg-base-200 rounded-xl p-4 shadow-sm relative" data-comment-id="${comment.id}">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
+              ${comment.nickname.charAt(0).toUpperCase()}
+            </div>
+            <span class="font-semibold text-neutral-900 dark:text-neutral-100">
+              ${comment.nickname}
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-neutral-400 bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 rounded">
+              #${index}
+            </span>
+            <span class="text-xs text-neutral-500" data-timestamp="${comment.timestamp}">
+              ${formatTimeAgo(comment.timestamp)}
+            </span>
+          </div>
+        </div>
+        <p class="text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap break-words">
+          ${comment.content}
+        </p>
+      </div>
+    `;
+  }
+
+  function renderEmptyState(): string {
+    return `
+      <div class="text-center py-12 text-neutral-500">
+        <i class="icon-base icon-[tabler--message-off] text-4xl mb-2"></i>
+        <p>还没有留言，快来抢沙发吧！</p>
+      </div>
+    `;
+  }
+
+  function renderLoadingMore(): string {
+    return `
+      <div id="loading-more" class="text-center py-4 text-neutral-500">
+        <i class="icon-base icon-[tabler--loader] animate-spin text-xl"></i>
+        <p class="mt-1 text-sm">加载更多...</p>
+      </div>
+    `;
+  }
+
+  function renderNoMore(): string {
+    return `
+      <div id="no-more" class="text-center py-4 text-neutral-400 text-sm">
+        <p>没有更多留言了</p>
+      </div>
+    `;
+  }
+
+  async function loadComments(page: number = 1, append: boolean = false) {
+    if (isLoading) return;
+    
+    isLoading = true;
+    const commentsList = document.getElementById('comments-list') as HTMLElement;
+    const loadingIndicator = document.getElementById('loading-indicator') as HTMLElement;
+    
+    if (!append) {
+      loadingIndicator.style.display = 'block';
+    }
+    
+    try {
+      const response = await fetch(`/api/comments?page=${page}&limit=${limit}`, {
+        cache: 'no-store'
+      });
+      if (!response.ok) throw new Error('Failed to fetch');
+      
+      const data: ApiResponse = await response.json();
+      
+      if (!append) {
+        loadingIndicator.style.display = 'none';
+        commentsList.innerHTML = '';
+      }
+      
+      const existingLoadingMore = document.getElementById('loading-more');
+      if (existingLoadingMore) {
+        existingLoadingMore.remove();
+      }
+      
+      if (data.comments.length === 0 && !append) {
+        commentsList.innerHTML = renderEmptyState();
+      } else {
+        data.comments.forEach((comment, i) => {
+          const globalIndex = data.pagination.total - ((page - 1) * limit + i);
+          commentsList.insertAdjacentHTML('beforeend', renderComment(comment, globalIndex));
+        });
+      }
+      
+      currentPage = data.pagination.page;
+      hasMore = data.pagination.hasMore;
+      totalComments = data.pagination.total;
+      
+      if (!hasMore && data.pagination.total > 0) {
+        commentsList.insertAdjacentHTML('beforeend', renderNoMore());
+      }
+      
+      updateTimeAgo();
+    } catch (error) {
+      if (!append) {
+        loadingIndicator.style.display = 'none';
+        commentsList.innerHTML = `
+          <div class="text-center py-12 text-red-500">
+            <i class="icon-base icon-[tabler--alert-triangle] text-4xl mb-2"></i>
+            <p>加载失败，请刷新页面重试</p>
+          </div>
+        `;
+      }
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  async function loadMoreComments() {
+    if (isLoading || !hasMore) return;
+    
+    const commentsList = document.getElementById('comments-list') as HTMLElement;
+    const existingNoMore = document.getElementById('no-more');
+    if (existingNoMore) {
+      existingNoMore.remove();
+    }
+    
+    commentsList.insertAdjacentHTML('beforeend', renderLoadingMore());
+    
+    await loadComments(currentPage + 1, true);
+  }
+
+  function setupInfiniteScroll() {
+    const trigger = document.getElementById('load-more-trigger');
+    if (!trigger) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && hasMore && !isLoading) {
+          loadMoreComments();
+        }
+      });
+    }, {
+      rootMargin: '100px'
+    });
+    
+    observer.observe(trigger);
+  }
+
+  function updateTimeAgo() {
+    const timeElements = document.querySelectorAll('[data-timestamp]');
+    timeElements.forEach(element => {
+      const timestamp = parseInt(element.getAttribute('data-timestamp') || '0');
+      element.textContent = formatTimeAgo(timestamp);
+    });
+  }
+
+  function insertNewComment(comment: Comment, total: number) {
+    const commentsList = document.getElementById('comments-list') as HTMLElement;
+    const existingEmpty = commentsList.querySelector('.text-center.py-12');
+    if (existingEmpty) {
+      commentsList.innerHTML = '';
+    }
+    
+    const existingNoMore = document.getElementById('no-more');
+    if (existingNoMore) {
+      existingNoMore.remove();
+    }
+    
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = renderComment(comment, total);
+    const newCommentEl = tempDiv.firstElementChild as HTMLElement;
+    newCommentEl.style.opacity = '0';
+    newCommentEl.style.transform = 'translateY(-10px)';
+    newCommentEl.style.transition = 'opacity 0.3s, transform 0.3s';
+    
+    commentsList.insertAdjacentElement('afterbegin', newCommentEl);
+    
+    requestAnimationFrame(() => {
+      newCommentEl.style.opacity = '1';
+      newCommentEl.style.transform = 'translateY(0)';
+    });
+    
+    const allComments = commentsList.querySelectorAll('[data-comment-id]');
+    allComments.forEach((el, i) => {
+      if (i > 0) {
+        const indexEl = el.querySelector('.font-mono');
+        if (indexEl) {
+          const currentIndex = parseInt(indexEl.textContent?.replace('#', '') || '0');
+          if (currentIndex > 0) {
+            indexEl.textContent = `#${currentIndex - 1}`;
+          }
+        }
+      }
+    });
+  }
+
+  async function handleSubmit(e: Event) {
+    e.preventDefault();
+    
+    const form = e.target as HTMLFormElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const messageDiv = document.getElementById('form-message') as HTMLDivElement;
+    const content = (document.getElementById('content') as HTMLTextAreaElement).value.trim();
+    
+    if (content.length < 2) {
+      messageDiv.textContent = '内容太短了，至少2个字';
+      messageDiv.className = 'mt-4 text-sm text-red-600';
+      messageDiv.classList.remove('hidden');
+      return;
+    }
+    
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
+    messageDiv.classList.add('hidden');
+    
+    const tempId = 'temp-' + Date.now();
+    const tempComment: Comment = {
+      id: tempId,
+      nickname: '匿名用户',
+      content: content,
+      timestamp: Date.now()
+    };
+    
+    const newTotal = totalComments + 1;
+    insertNewComment(tempComment, newTotal);
+    
+    form.reset();
+    document.getElementById('char-count')!.textContent = '0';
+    
+    messageDiv.textContent = '留言成功！';
+    messageDiv.className = 'mt-4 text-sm text-green-600';
+    messageDiv.classList.remove('hidden');
+    
+    try {
+      const response = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+      });
+      
+      const data = await response.json() as { error?: string; success?: boolean; comment?: Comment };
+      
+      if (response.ok && data.success) {
+        totalComments = newTotal;
+        
+        if (data.comment) {
+          const tempEl = document.querySelector(`[data-comment-id="${tempId}"]`);
+          if (tempEl) {
+            tempEl.setAttribute('data-comment-id', data.comment.id);
+          }
+        }
+      } else {
+        const tempEl = document.querySelector(`[data-comment-id="${tempId}"]`);
+        if (tempEl) {
+          tempEl.remove();
+        }
+        
+        messageDiv.textContent = data.error || '提交失败，请重试';
+        messageDiv.className = 'mt-4 text-sm text-red-600';
+        messageDiv.classList.remove('hidden');
+      }
+    } catch (error) {
+      const tempEl = document.querySelector(`[data-comment-id="${tempId}"]`);
+      if (tempEl) {
+        tempEl.remove();
+      }
+      
+      messageDiv.textContent = '网络错误，请重试';
+      messageDiv.className = 'mt-4 text-sm text-red-600';
+      messageDiv.classList.remove('hidden');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '提交留言';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadComments();
+    setupInfiniteScroll();
+    
+    const form = document.getElementById('comment-form');
+    form?.addEventListener('submit', handleSubmit);
+    
+    const contentInput = document.getElementById('content') as HTMLTextAreaElement;
+    const charCount = document.getElementById('char-count') as HTMLElement;
+    
+    contentInput?.addEventListener('input', () => {
+      charCount.textContent = contentInput.value.length.toString();
+    });
+    
+    setInterval(updateTimeAgo, 60000);
+  });
+</script>

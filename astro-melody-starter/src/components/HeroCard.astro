@@ -1,0 +1,58 @@
+---
+import type { CollectionEntry } from "astro:content";
+import OptimizedCover from "@components/OptimizedPicture.astro";
+import FormattedDate from "@components/FormattedDate.astro";
+
+interface Props {
+  post: CollectionEntry<"posts">;
+}
+
+const { post } = Astro.props;
+
+function truncateUTF8String(str: string, maxBytes: number) {
+  let byteCount = 0;
+  let index = 0;
+  while (index < str.length && byteCount < maxBytes) {
+    const char = str.charCodeAt(index);
+    if (char > 0x7ff) {
+      byteCount += 3;
+    } else if (char > 0x7f) {
+      byteCount += 2;
+    } else {
+      byteCount += 1;
+    }
+    if (byteCount <= maxBytes) index++;
+    else break;
+  }
+  return str.slice(0, index) + (index < str.length ? "..." : "");
+}
+
+const truncatedDescription = truncateUTF8String(post.data.description, 150);
+---
+
+<div
+  class="card relative min-h-[500px] overflow-hidden rounded-xl bg-base-100 shadow-xl transition-transform duration-500 hover:-translate-y-1 hover:scale-105"
+>
+  <a href={`/posts/${post.id}/`} class="block h-full">
+    <div class="absolute inset-0 z-0">
+      <OptimizedCover src={post.data.cover} alt={post.data.coverAlt} class="h-full w-full object-cover" />
+      <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+    </div>
+    <div class="card-body relative z-10 flex flex-col justify-end p-6 text-white">
+      <div class="flex items-center gap-2 text-xs">
+        {
+          post.data.tags.map((tag) => (
+            <span class="badge badge-outline border-white/30 bg-white/20 text-white">{tag}</span>
+          ))
+        }
+      </div>
+      <p class="text-xs opacity-80"><FormattedDate date={post.data.pubDate} /></p>
+      <h3 class="card-title text-white">
+        {post.data.title}
+      </h3>
+      <p class="opacity-90">
+        {truncatedDescription}
+      </p>
+    </div>
+  </a>
+</div>

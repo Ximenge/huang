@@ -1,0 +1,80 @@
+---
+import { getCollection, render } from "astro:content";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import RelatedPostsCard from "@components/RelatedPostsCard.astro";
+import FormattedDate from "@components/FormattedDate.astro";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("posts");
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: post,
+  }));
+}
+
+const post = Astro.props;
+const { Content } = await render(post);
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const imageURL = post.data.cover ? new URL(post.data.cover, Astro.site).toString() : "";
+---
+
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": post.data.title,
+    "description": post.data.description,
+    "image": imageURL,
+    "datePublished": post.data.pubDate,
+    "dateModified": new Date().toISOString(),
+    "author": {
+      "@type": "Organization",
+      "name": "Astro Melody",
+      "url": Astro.site
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Astro Melody",
+      "url": Astro.site
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": canonicalURL.toString()
+    },
+    "keywords": post.data.tags.join(", ")
+  })}></script>
+  <main>
+    <article class="prose mx-auto dark:prose-invert">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100 md:text-4xl">{post.data.title}</h1>
+      </div>
+
+      <div>
+        <Content />
+      </div>
+      <div class="flex gap-2 prose-a:no-underline">
+        {
+          post.data.tags.map((tag) => (
+            <span class="badge badge-outline badge-md">
+              <a href={`/tags/${tag}/1/`}>{tag}</a>
+            </span>
+          ))
+        }
+      </div>
+      <div class="mt-4 flex justify-between">
+        <small
+          >Publish on <FormattedDate date={post.data.pubDate} />，Update on <FormattedDate
+            date={new Date().toISOString()}
+          /></small
+        >
+      </div>
+    </article>
+    <div class="mt-12">
+      <RelatedPostsCard
+        currentCategory={post.data.category[0]}
+        currentSlug={post.id}
+      />
+    </div>
+  </main>
+</BaseLayout>

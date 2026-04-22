@@ -1,0 +1,280 @@
+---
+import { getCollection, type CollectionEntry } from "astro:content";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Pagination from "@components/Pagination.astro";
+
+const allPosts = await getCollection("posts");
+
+allPosts.sort(
+  (a, b) =>
+    new Date(b.data.pubDate).valueOf() - new Date(a.data.pubDate).valueOf(),
+);
+
+const postsPerPage = 25;
+const totalPages = Math.ceil(allPosts.length / postsPerPage);
+const totalPosts = allPosts.length;
+const firstPagePosts = allPosts.slice(0, postsPerPage);
+
+function formatDate(date: Date | string): string {
+  const d = new Date(date);
+  return d.toISOString().split('T')[0];
+}
+
+function groupPostsByDate(posts: CollectionEntry<"posts">[]) {
+  const groups: { [date: string]: CollectionEntry<"posts">[] } = {};
+  
+  posts.forEach((post) => {
+    const date = formatDate(post.data.pubDate);
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(post);
+  });
+
+  return Object.entries(groups).sort((a, b) => 
+    new Date(b[0]).valueOf() - new Date(a[0]).valueOf()
+  );
+}
+
+const groupedPosts = groupPostsByDate(firstPagePosts);
+---
+
+<BaseLayout title="博文归档" description="按日期分类的所有博文列表">
+  <div class="prose prose-lg mx-auto p-6 max-w-4xl">
+    <h1 class="text-2xl font-bold mb-2">博文归档</h1>
+    <p class="text-neutral-500 mb-4">共 {totalPosts} 篇博文</p>
+
+    <div class="mb-6">
+      <div class="relative">
+        <input 
+          type="text" 
+          id="archive-search" 
+          placeholder="搜索博文标题..." 
+          class="w-full px-4 py-3 pr-10 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <button 
+          id="clear-search" 
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 hidden"
+          aria-label="清除搜索"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+      <p id="search-status" class="text-sm text-neutral-500 mt-2 hidden"></p>
+    </div>
+
+    <div id="search-results" class="hidden mb-8">
+      <h2 class="text-lg font-semibold mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
+        <span class="text-neutral-600 dark:text-neutral-400">搜索结果</span>
+        <span id="search-count" class="text-sm font-normal text-neutral-400 ml-2"></span>
+      </h2>
+      <ul id="search-results-list" class="space-y-2 list-none pl-0"></ul>
+    </div>
+
+    <div id="archive-list">
+      {groupedPosts.map(([date, datePosts]) => (
+        <div class="mb-8">
+          <h2 class="text-lg font-semibold mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
+            <span class="text-neutral-600 dark:text-neutral-400">{date}</span>
+            <span class="text-sm font-normal text-neutral-400 ml-2">({datePosts.length}篇)</span>
+          </h2>
+          <ul class="space-y-2 list-none pl-0">
+            {datePosts.map((post) => (
+              <li class="flex items-start gap-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded px-2 -mx-2 transition-colors">
+                <span class="text-neutral-400 text-sm shrink-0 mt-0.5">
+                  {new Date(post.data.pubDate).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+                <a 
+                  href={`/posts/${post.id}/`}
+                  class="text-neutral-800 dark:text-neutral-200 hover:text-blue-600 dark:hover:text-blue-400 no-underline flex-1"
+                >
+                  {post.data.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+
+    <div id="pagination-container">
+      <Pagination
+        currentPage={1}
+        lastPage={totalPages}
+        urlPrev={null}
+        urlNext={totalPages > 1 ? "/archives/2/" : null}
+        basePath="/archives/"
+        maxDisplayedPages={5}
+      />
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  let allPosts: Array<{id: string; title: string; pubDate: string; url: string}> = [];
+  let searchTimeout: number | null = null;
+
+  const searchInput = document.getElementById('archive-search') as HTMLInputElement;
+  const clearBtn = document.getElementById('clear-search') as HTMLButtonElement;
+  const searchResults = document.getElementById('search-results') as HTMLElement;
+  const searchResultsList = document.getElementById('search-results-list') as HTMLElement;
+  const searchCount = document.getElementById('search-count') as HTMLElement;
+  const searchStatus = document.getElementById('search-status') as HTMLElement;
+  const archiveList = document.getElementById('archive-list') as HTMLElement;
+  const paginationContainer = document.getElementById('pagination-container') as HTMLElement;
+
+  async function loadAllPosts() {
+    if (allPosts.length === 0) {
+      try {
+        const response = await fetch('/api/archives.json');
+        allPosts = await response.json();
+      } catch (error) {
+        console.error('Failed to load posts:', error);
+      }
+    }
+    return allPosts;
+  }
+
+  function fuzzyMatch(text: string, query: string): boolean {
+    const textLower = text.toLowerCase();
+    const queryLower = query.toLowerCase();
+    
+    if (textLower.includes(queryLower)) {
+      return true;
+    }
+
+    let queryIndex = 0;
+    for (let i = 0; i < text.length && queryIndex < query.length; i++) {
+      if (textLower[i] === queryLower[queryIndex]) {
+        queryIndex++;
+      }
+    }
+    return queryIndex === query.length;
+  }
+
+  function highlightMatch(text: string, query: string): string {
+    const textLower = text.toLowerCase();
+    const queryLower = query.toLowerCase();
+    
+    if (!queryLower) return text;
+    
+    const index = textLower.indexOf(queryLower);
+    if (index === -1) return text;
+    
+    const before = text.slice(0, index);
+    const match = text.slice(index, index + query.length);
+    const after = text.slice(index + query.length);
+    
+    return `${before}<mark class="bg-yellow-200 dark:bg-yellow-600 px-0.5 rounded">${match}</mark>${after}`;
+  }
+
+  function formatDate(dateStr: string): string {
+    const d = new Date(dateStr);
+    return d.toISOString().split('T')[0];
+  }
+
+  function formatTime(dateStr: string): string {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  async function performSearch(query: string) {
+    if (!query.trim()) {
+      showArchiveList();
+      return;
+    }
+
+    const posts = await loadAllPosts();
+    const results = posts.filter(post => fuzzyMatch(post.title, query));
+    
+    showSearchResults(results, query);
+  }
+
+  function showSearchResults(results: typeof allPosts, query: string) {
+    archiveList.classList.add('hidden');
+    paginationContainer.classList.add('hidden');
+    searchResults.classList.remove('hidden');
+    
+    searchCount.textContent = `(${results.length}篇)`;
+    
+    if (results.length === 0) {
+      searchResultsList.innerHTML = `
+        <li class="text-neutral-500 py-4 text-center">
+          未找到匹配"${query}"的博文
+        </li>
+      `;
+      return;
+    }
+
+    const groupedResults = results.reduce((groups, post) => {
+      const date = formatDate(post.pubDate);
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(post);
+      return groups;
+    }, {} as Record<string, typeof results>);
+
+    const sortedGroups = Object.entries(groupedResults).sort((a, b) => 
+      new Date(b[0]).valueOf() - new Date(a[0]).valueOf()
+    );
+
+    searchResultsList.innerHTML = sortedGroups.map(([date, posts]) => `
+      <li class="mb-4">
+        <div class="text-sm text-neutral-500 mb-2">${date}</div>
+        <ul class="space-y-2 list-none pl-0">
+          ${posts.map(post => `
+            <li class="flex items-start gap-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded px-2 -mx-2 transition-colors">
+              <span class="text-neutral-400 text-sm shrink-0 mt-0.5">
+                ${formatTime(post.pubDate)}
+              </span>
+              <a 
+                href="${post.url}"
+                class="text-neutral-800 dark:text-neutral-200 hover:text-blue-600 dark:hover:text-blue-400 no-underline flex-1"
+              >
+                ${highlightMatch(post.title, query)}
+              </a>
+            </li>
+          `).join('')}
+        </ul>
+      </li>
+    `).join('');
+  }
+
+  function showArchiveList() {
+    archiveList.classList.remove('hidden');
+    paginationContainer.classList.remove('hidden');
+    searchResults.classList.add('hidden');
+    searchResultsList.innerHTML = '';
+  }
+
+  searchInput.addEventListener('input', (e) => {
+    const query = (e.target as HTMLInputElement).value;
+    clearBtn.classList.toggle('hidden', !query);
+    
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    searchTimeout = window.setTimeout(() => {
+      performSearch(query);
+    }, 300);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    clearBtn.classList.add('hidden');
+    showArchiveList();
+    searchInput.focus();
+  });
+
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      clearBtn.classList.add('hidden');
+      showArchiveList();
+    }
+  });
+</script>

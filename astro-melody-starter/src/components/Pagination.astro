@@ -1,0 +1,139 @@
+---
+export interface Props {
+  currentPage: number;
+  lastPage: number;
+  urlPrev: string | null;
+  urlNext: string | null;
+  basePath: string;
+  maxDisplayedPages: number;
+}
+
+const {
+  currentPage,
+  lastPage,
+  urlPrev,
+  urlNext,
+  basePath,
+  maxDisplayedPages = 5,
+} = Astro.props;
+
+const startPage = Math.max(
+  1,
+  Math.min(
+    currentPage - Math.floor(maxDisplayedPages / 2),
+    lastPage - maxDisplayedPages + 1,
+  ),
+);
+const endPage = Math.min(lastPage, startPage + maxDisplayedPages - 1);
+
+function ensureTrailingSlash(path: string) {
+  return path.endsWith("/") ? path : `${path}/`;
+}
+
+const computedBasePath = basePath ? ensureTrailingSlash(basePath) : "/page/";
+---
+
+<nav
+  class="mt-8 flex items-center justify-center gap-x-1"
+  aria-label="Pagination"
+>
+  {
+    urlPrev ? (
+      <a
+        href={ensureTrailingSlash(urlPrev)}
+        aria-label="Previous page"
+        class="inline-flex min-h-[38px] min-w-[38px] items-center justify-center gap-x-1.5 rounded-lg px-2.5 py-2 text-sm"
+      >
+        <i class="i-tabler-chevron-left icon-base"></i>
+      </a>
+    ) : (
+      ""
+    )
+  }
+  <ul class="flex items-center gap-x-1">
+    {
+      Array.from({ length: endPage - startPage + 1 }, (_, i) => {
+        const pageNumber = startPage + i;
+        const isActive = currentPage === pageNumber;
+        const pageClass = `min-h-[38px] min-w-[38px] flex justify-center items-center py-2 px-3 text-sm rounded-lg ${isActive ? "bg-base-300" : ""}`;
+        return (
+          <li>
+            <a
+              href={`${computedBasePath}${pageNumber}/`}
+              class={pageClass}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {pageNumber}
+            </a>
+          </li>
+        );
+      })
+    }
+  </ul>
+  {
+    urlNext ? (
+      <a
+        href={ensureTrailingSlash(urlNext)}
+        aria-label="Next page"
+        class="inline-flex min-h-[38px] min-w-[38px] items-center justify-center gap-x-1.5 rounded-lg px-2.5 py-2 text-sm"
+      >
+        <i class="icon-[tabler--chevron-right] icon-base"></i>
+      </a>
+    ) : (
+      ""
+    )
+  }
+  
+  <!-- 跳转到指定页码功能 -->
+  <div class="ml-4 flex items-center gap-x-2">
+    <span class="text-sm">跳转到:</span>
+    <form onsubmit={`event.preventDefault(); window.handlePageJump(event, ${lastPage}, '${computedBasePath}')`} class="flex items-center gap-x-1">
+      <input
+        type="number"
+        min="1"
+        max={lastPage}
+        value={currentPage}
+        class="w-16 min-h-[38px] rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label="页码"
+      />
+      <button
+        type="submit"
+        class="inline-flex min-h-[38px] min-w-[38px] items-center justify-center gap-x-1.5 rounded-lg px-2.5 py-2 text-sm bg-base-200 hover:bg-base-300 transition-colors"
+        aria-label="跳转到指定页码"
+      >
+        跳转
+      </button>
+    </form>
+  </div>
+  
+  <script>
+    // Declare function globally to avoid unused warning
+    declare global {
+      interface Window {
+        handlePageJump: (event: Event, maxPage: number, basePath: string) => void;
+      }
+    }
+    
+    window.handlePageJump = function(event: Event, maxPage: number, basePath: string) {
+      const input = (event.target as HTMLElement).querySelector('input[type="number"]') as HTMLInputElement;
+      const page = parseInt(input.value, 10);
+      const max = maxPage;
+      
+      // 错误输入处理
+      if (isNaN(page) || page < 1) {
+        input.value = '1';
+        window.location.href = basePath + '1/';
+        return;
+      }
+      
+      if (page > max) {
+        input.value = String(max);
+        window.location.href = basePath + max + '/';
+        return;
+      }
+      
+      // 跳转到指定页码
+      window.location.href = basePath + page + '/';
+    }
+  </script>
+</nav>

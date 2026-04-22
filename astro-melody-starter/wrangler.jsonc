@@ -1,0 +1,31 @@
+{
+	"main": "dist/_worker.js/index.js",
+	"name": "astro-melody",
+	"compatibility_date": "2026-02-25",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist"
+	},
+	"observability": {
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "astro_messages",
+			"database_name": "astro-messages",
+			"database_id": "88f292d1-2b4c-4570-978c-cd100d5942ec",
+			"remote": true
+		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "GUESTBOOK",
+			"id": "98545db89c3a4b0191d8daff2471ae87",
+			"remote": true
+		}
+	]
+}

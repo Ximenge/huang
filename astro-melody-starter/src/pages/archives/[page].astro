@@ -1,0 +1,109 @@
+---
+import { getCollection, type CollectionEntry } from "astro:content";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import Pagination from "@components/Pagination.astro";
+
+export async function getStaticPaths() {
+  const allPosts = await getCollection("posts");
+  
+  allPosts.sort(
+    (a, b) =>
+      new Date(b.data.pubDate).valueOf() - new Date(a.data.pubDate).valueOf(),
+  );
+
+  const postsPerPage = 25;
+  const totalPages = Math.ceil(allPosts.length / postsPerPage);
+
+  return Array.from({ length: totalPages }, (_, index) => ({
+    params: { page: (index + 1).toString() },
+    props: {
+      posts: allPosts.slice(index * postsPerPage, (index + 1) * postsPerPage),
+      currentPage: index + 1,
+      totalPages: totalPages,
+      totalPosts: allPosts.length,
+    },
+  }));
+}
+
+interface Props {
+  posts: CollectionEntry<"posts">[];
+  currentPage: number;
+  totalPages: number;
+  totalPosts: number;
+}
+
+const { posts, currentPage, totalPages, totalPosts } = Astro.props as Props;
+
+function formatDate(date: Date | string): string {
+  const d = new Date(date);
+  return d.toISOString().split('T')[0];
+}
+
+function groupPostsByDate(posts: CollectionEntry<"posts">[]) {
+  const groups: { [date: string]: CollectionEntry<"posts">[] } = {};
+  
+  posts.forEach((post) => {
+    const date = formatDate(post.data.pubDate);
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(post);
+  });
+
+  return Object.entries(groups).sort((a, b) => 
+    new Date(b[0]).valueOf() - new Date(a[0]).valueOf()
+  );
+}
+
+const groupedPosts = groupPostsByDate(posts);
+
+function getUrlPrev() {
+  if (currentPage <= 1) return null;
+  return currentPage === 2 ? "/archives/" : `/archives/${currentPage - 1}/`;
+}
+
+function getUrlNext() {
+  if (currentPage >= totalPages) return null;
+  return `/archives/${currentPage + 1}/`;
+}
+---
+
+<BaseLayout title={`博文归档 - 第${currentPage}页`} description="按日期分类的所有博文列表">
+  <div class="prose prose-lg mx-auto p-6 max-w-4xl">
+    <h1 class="text-2xl font-bold mb-2">博文归档</h1>
+    <p class="text-neutral-500 mb-6">共 {totalPosts} 篇博文</p>
+
+    {groupedPosts.map(([date, datePosts]) => (
+      <div class="mb-8">
+        <h2 class="text-lg font-semibold mb-3 pb-2 border-b border-neutral-200 dark:border-neutral-700">
+          <span class="text-neutral-600 dark:text-neutral-400">{date}</span>
+          <span class="text-sm font-normal text-neutral-400 ml-2">({datePosts.length}篇)</span>
+        </h2>
+        <ul class="space-y-2 list-none pl-0">
+          {datePosts.map((post) => (
+            <li class="flex items-start gap-2 py-1 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded px-2 -mx-2 transition-colors">
+              <span class="text-neutral-400 text-sm shrink-0 mt-0.5">
+                {new Date(post.data.pubDate).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <a 
+                href={`/posts/${post.id}/`}
+                class="text-neutral-800 dark:text-neutral-200 hover:text-blue-600 dark:hover:text-blue-400 no-underline flex-1"
+              >
+                {post.data.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+
+    <Pagination
+      currentPage={currentPage}
+      lastPage={totalPages}
+      urlPrev={getUrlPrev()}
+      urlNext={getUrlNext()}
+      basePath="/archives/"
+      maxDisplayedPages={5}
+    />
+  </div>
+</BaseLayout>

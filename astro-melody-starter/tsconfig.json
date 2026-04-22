@@ -1,0 +1,22 @@
+{
+  "extends": "astro/tsconfigs/base",
+  "compilerOptions": {
+    "strictNullChecks": true,
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "types": ["@cloudflare/workers-types"],
+    "paths": {
+      "@components/*": ["src/components/*"],
+      "@layouts/*": ["src/layouts/*"],
+      "@utils/*": ["src/utils/*"],
+      "@consts": ["src/consts.ts"],
+      "@data/*": ["src/data/*"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "videos_output",
+    "videos_input"
+  ]
+}

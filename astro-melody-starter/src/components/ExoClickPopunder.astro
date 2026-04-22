@@ -1,0 +1,22 @@
+---
+import { POPUNDER_ENABLED, POPUNDER_IDZONE, POPUNDER_FREQUENCY_PERIOD, POPUNDER_FREQUENCY_COUNT, POPUNDER_TRIGGER_METHOD } from "@consts";
+
+if (!POPUNDER_ENABLED) {
+  return;
+}
+---
+
+<script
+  is:inline
+  type="application/javascript"
+  async
+  src="/popunder.js"
+  id="popunderldr"
+  data-idzone={POPUNDER_IDZONE}
+  data-frequency_period={POPUNDER_FREQUENCY_PERIOD}
+  data-frequency_count={POPUNDER_FREQUENCY_COUNT}
+  data-trigger_method={POPUNDER_TRIGGER_METHOD}
+  data-chrome_enabled="true"
+  data-capping_enabled="true"
+  data-cookieconsent="true">
+</script>

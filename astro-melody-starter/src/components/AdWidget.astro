@@ -1,0 +1,118 @@
+---
+// AdWidget.astro - 横向广告组件
+---
+
+<div class="ad-box relative shadow-xl rounded-xl overflow-hidden transition-transform duration-500 hover:-translate-y-1 hover:scale-105">
+  <script is:inline async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+  <ins class="eas6a97888e20" data-zoneid="5863494"></ins>
+  <script is:inline>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+</div>
+
+<style>
+  /* 广告外层容器 - 固定尺寸 */
+  .ad-box {
+    width: 352px !important;
+    height: 300px !important;
+    max-width: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  /* ins标签占满容器 */
+  .ad-box > ins.eas6a97888e20 {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+  }
+
+  /* 广告商生成的最外层容器 */
+  .eas6a97888e20 > div[id^="exo-native-widget-"] {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+
+  /* 完全隐藏头部 */
+  .eas6a97888e20 .exo-native-widget-header {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
+    top: -9999px !important;
+  }
+
+  /* outer-container占满整个空间 */
+  .eas6a97888e20 .exo-native-widget-outer-container {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* item-container */
+  .eas6a97888e20 .exo-native-widget-item-container {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 广告项 */
+  .eas6a97888e20 .exo-native-widget-item {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* 图片wrapper */
+  .eas6a97888e20 .exo-native-widget-item-image-wrapper {
+    width: 100% !important;
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+
+  /* 图片 */
+  .eas6a97888e20 .exo-native-widget-item-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+  }
+
+  /* 隐藏标题和文字 */
+  .eas6a97888e20 .exo-native-widget-item-title,
+  .eas6a97888e20 .exo-native-widget-item-text {
+    display: none !important;
+  }
+
+  /* 通用图片样式 */
+  .eas6a97888e20 img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  /* 确保所有子元素没有padding和margin */
+  .eas6a97888e20 * {
+    box-sizing: border-box !important;
+  }
+
+  .eas6a97888e20 [class*="header"] {
+    display: none !important;
+  }
+</style>

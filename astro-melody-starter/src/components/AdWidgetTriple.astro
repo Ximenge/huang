@@ -1,0 +1,153 @@
+---
+import type { CollectionEntry } from "astro:content";
+import FormattedDate from "@components/FormattedDate.astro";
+
+interface Props {
+  posts?: CollectionEntry<"posts">[];
+}
+
+const { posts = [] } = Astro.props;
+
+const postsData = posts.map(post => ({
+  id: post.id,
+  cover: post.data.cover,
+  coverAlt: post.data.coverAlt,
+  tags: post.data.tags,
+  pubDate: post.data.pubDate,
+  title: post.data.title
+}));
+---
+
+{[1, 2, 3].map((_, index) => (
+  <div class="ad-box relative h-[300px] shadow-xl rounded-xl overflow-hidden transition-transform duration-500 hover:-translate-y-1 hover:scale-105" data-ad-index={index}>
+    <div class="ad-layer absolute inset-0 z-0">
+      <script is:inline async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+      <ins class="eas6a97888e20" data-zoneid="5863494"></ins>
+      <script is:inline>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+    </div>
+    
+    <div class="content-layer absolute inset-0 z-10 pointer-events-none">
+      <figure class="h-full">
+        <img class="ad-cover h-full w-full object-cover" src="" alt="" />
+      </figure>
+      <div class="absolute bottom-0 left-0 right-0 p-4 text-white bg-gradient-to-t from-black/70 to-transparent">
+        <div class="ad-tags flex items-center gap-1 text-xs">
+        </div>
+        <p class="ad-date text-xs opacity-90"></p>
+        <h3 class="ad-title card-title text-white"></h3>
+      </div>
+    </div>
+  </div>
+))}
+
+<script define:vars={{ postsData }}>
+  function formatDate(date) {
+    return new Date(date).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
+
+  function shuffleArray(array) {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  function updateAdBoxes() {
+    const adBoxes = document.querySelectorAll('.ad-box');
+    const randomPosts = shuffleArray(postsData).slice(0, 3);
+    
+    adBoxes.forEach((box, index) => {
+      const post = randomPosts[index];
+      if (!post) return;
+      
+      const cover = box.querySelector('.ad-cover');
+      const tagsContainer = box.querySelector('.ad-tags');
+      const dateEl = box.querySelector('.ad-date');
+      const titleEl = box.querySelector('.ad-title');
+      
+      if (cover) {
+        cover.src = post.cover;
+        cover.alt = post.coverAlt || post.title;
+      }
+      
+      if (tagsContainer && post.tags) {
+        tagsContainer.innerHTML = post.tags.map(tag => 
+          `<span class="badge badge-outline bg-white/20 text-white border-white/30">${tag}</span>`
+        ).join('');
+      }
+      
+      if (dateEl) {
+        dateEl.textContent = formatDate(post.pubDate);
+      }
+      
+      if (titleEl) {
+        titleEl.textContent = post.title;
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', updateAdBoxes);
+</script>
+
+<style>
+  .ad-box {
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .ad-layer {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .ad-layer > ins.eas6a97888e20 {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .eas6a97888e20 > div[id^="exo-native-widget-"] {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .eas6a97888e20 .exo-native-widget-header {
+    display: none !important;
+  }
+
+  .eas6a97888e20 .exo-native-widget-outer-container {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .eas6a97888e20 .exo-native-widget-item-container {
+    width: 100% !important;
+    height: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .eas6a97888e20 .exo-native-widget-item {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .eas6a97888e20 .exo-native-widget-item-image-wrapper,
+  .eas6a97888e20 .exo-native-widget-item-image,
+  .eas6a97888e20 .exo-native-widget-item-title,
+  .eas6a97888e20 .exo-native-widget-item-text {
+    display: none !important;
+  }
+
+  .content-layer {
+    pointer-events: none !important;
+  }
+</style>

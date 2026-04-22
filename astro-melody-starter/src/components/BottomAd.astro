@@ -1,0 +1,121 @@
+---
+// BottomAd.astro - 底部悬浮广告组件
+// 广告商会自动生成固定在底部的广告容器和关闭按钮
+---
+
+<div id="bottomAdContainer" class="bottom-ad-wrapper hidden">
+  <script is:inline async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+  <ins class="eas6a97888e17" data-zoneid="5863710" data-block-ad-types="92,45"></ins>
+  <script is:inline>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+</div>
+
+<script type="module">
+  (function() {
+    const adContainer = document.getElementById('bottomAdContainer');
+    
+    // 显示广告
+    function showAd() {
+      if (adContainer) {
+        adContainer.classList.remove('hidden');
+      }
+    }
+    
+    // 页面加载后显示广告
+    function init() {
+      // 检查当前是否在年龄验证页面
+      const ageModal = document.getElementById('ageVerificationModal');
+      const isAgeVerificationVisible = ageModal && !ageModal.classList.contains('hidden');
+      
+      // 如果年龄验证弹窗显示中，不显示广告
+      if (isAgeVerificationVisible) {
+        // 监听年龄验证关闭事件
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              if (ageModal.classList.contains('hidden')) {
+                showAd();
+                observer.disconnect();
+              }
+            }
+          });
+        });
+        
+        observer.observe(ageModal, { attributes: true });
+      } else {
+        // 不在年龄验证页面，延迟显示广告
+        setTimeout(showAd, 1000);
+      }
+    }
+    
+    // 初始化
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+    
+    // Astro 页面导航后重新显示广告
+    document.addEventListener('astro:page-load', function() {
+      setTimeout(function() {
+        const ageModal = document.getElementById('ageVerificationModal');
+        const isAgeVerificationVisible = ageModal && !ageModal.classList.contains('hidden');
+        
+        if (!isAgeVerificationVisible) {
+          showAd();
+        }
+      }, 500);
+    });
+  })();
+</script>
+
+<style>
+  /* 底部广告容器 - 透明背景 */
+  .bottom-ad-wrapper {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    max-height: 100px;
+    overflow: hidden;
+    margin: auto;
+    display: block;
+    background: transparent;
+  }
+  
+  /* 广告容器基础样式 */
+  .bottom-ad-wrapper ins.eas6a97888e17 {
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+  }
+  
+  /* 广告商生成的底部固定容器样式覆盖 */
+  .bottom-ad-wrapper [id^="exo-mobile-im-container-wrapper"] {
+    background: none repeat scroll 0 0 rgba(226, 226, 226, 0.8) !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    position: fixed !important;
+    text-align: center;
+    width: 100%;
+    z-index: 1999900 !important;
+  }
+  
+  /* 关闭按钮样式 */
+  .bottom-ad-wrapper [id^="exo-mobile-im-close-button"] {
+    height: 24px;
+    width: 24px;
+    top: -12px;
+    right: -12px;
+    position: absolute;
+    z-index: 1999999 !important;
+    cursor: pointer;
+  }
+  
+  /* 广告内容容器 */
+  .bottom-ad-wrapper [id^="exo-mobile-im-content"] {
+    border: none;
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+</style>

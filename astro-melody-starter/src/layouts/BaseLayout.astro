@@ -1,0 +1,181 @@
+---
+import BaseHead from "@components/BaseHead.astro";
+import Header from "@components/Header.astro";
+import Footer from "@components/Footer.astro";
+import BottomAd from "@components/BottomAd.astro";
+import ExoClickPopunder from "@components/ExoClickPopunder.astro";
+import { POPUNDER_ENABLED } from "@consts";
+const { title, description } = Astro.props;
+import "../assets/app.css";
+
+// 检测是否为搜索引擎爬虫
+const userAgent = Astro.request.headers.get('user-agent') || '';
+const botUserAgents = [
+  'googlebot',
+  'bingbot',
+  'slurp',
+  'duckduckbot',
+  'baiduspider',
+  'yandexbot',
+  'facebookexternalhit',
+  'twitterbot',
+  'linkedinbot',
+  'whatsapp',
+  'telegrambot',
+  'applebot',
+  'petalbot',
+  'ahrefsbot',
+  'semrushbot',
+  'mj12bot',
+  'dotbot',
+  'rogerbot',
+  'screaming frog'
+];
+const isBot = botUserAgents.some(bot => userAgent.toLowerCase().includes(bot));
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} />
+  </head>
+  <body
+    class="flex flex-col min-h-screen mx-auto max-w-6xl px-4 dark:prose-invert sm:px-6 lg:px-8"
+  >
+    <!-- ExoClick Popunder 广告 - 爬虫不显示，开关控制 -->
+    {!isBot && POPUNDER_ENABLED && <ExoClickPopunder />}
+    
+    <Header />
+
+    <!-- 内容区域，确保其动态调整高度 -->
+    <main class="flex-grow">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <!-- 底部广告 - 爬虫不显示 -->
+    {!isBot && <BottomAd />}
+
+    <!-- Age Verification Modal - 爬虫不显示 -->
+    {!isBot && (
+    <div id="ageVerificationModal" class="fixed inset-0 z-50 hidden">
+      <!-- Backdrop -->
+      <div class="fixed inset-0 bg-black bg-opacity-75 backdrop-blur-sm transition-opacity">
+      </div>
+
+      <!-- Modal Container -->
+      <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+          <!-- Modal Content -->
+          <div class="relative transform overflow-hidden rounded-lg bg-white dark:bg-neutral-800 px-4 pb-4 pt-5 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6">
+            <!-- Icon -->
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/20">
+              <svg class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"></path>
+              </svg>
+            </div>
+
+            <!-- Title and Content -->
+            <div class="mt-3 text-center sm:mt-5">
+              <h3 class="text-lg font-semibold leading-6 text-neutral-900 dark:text-neutral-100">
+                年龄验证 / Age Verification Required
+              </h3>
+              <div class="mt-2">
+                <p class="text-sm text-neutral-500 dark:text-neutral-400">
+                  本网站包含成人内容, 非法律允许地区以及18岁以下用户禁止访问!
+                </p>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500 mt-1">
+                  This website contains content intended for adults. You must be 18
+                  years or older to continue.
+                </p>
+                <p class="mt-3 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
+                  您是否已年满18岁?
+                </p>
+                <p class="text-xs text-neutral-400 dark:text-neutral-500">
+                  Are you 18 years of age or older?
+                </p>
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="mt-5 sm:mt-6 sm:grid sm:grid-flow-row-dense sm:grid-cols-2 sm:gap-3">
+              <button id="confirmAge" type="button" class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 sm:col-start-2 transition-colors">
+                <span class="text-center">
+                  是的, 我已满18岁<br>
+                  <span class="text-xs opacity-90">Yes, I'm 18+</span>
+                </span>
+              </button>
+              <button id="denyAge" type="button" class="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-neutral-700 px-3 py-2 text-sm font-semibold text-neutral-900 dark:text-neutral-100 shadow-sm ring-1 ring-inset ring-neutral-300 dark:ring-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-600 sm:col-start-1 sm:mt-0 transition-colors">
+                <span class="text-center">
+                  不, 我未满18岁<br>
+                  <span class="text-xs opacity-70">No, I'm under 18</span>
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      (function() {
+        const n = "ageVerified",
+          t = document.getElementById("ageVerificationModal"),
+          i = document.getElementById("confirmAge"),
+          d = document.getElementById("denyAge");
+
+        function o() {
+          try {
+            return localStorage.getItem(n) === "true"
+          } catch {
+            try {
+              return sessionStorage.getItem(n) === "true"
+            } catch {
+              return !1
+            }
+          }
+        }
+
+        function r(e) {
+          try {
+            localStorage.setItem(n, e.toString())
+          } catch {
+            try {
+              sessionStorage.setItem(n, e.toString())
+            } catch {}
+          }
+        }
+
+        function c() {
+          t && (t.classList.remove("hidden"), document.body.style.overflow = "hidden")
+        }
+
+        function s() {
+          t && (t.classList.add("hidden"), document.body.style.overflow = "")
+        }
+
+        function f() {
+          r(!0), s()
+        }
+
+        function l() {
+          alert(`您必须年满18岁才能访问此网站。
+You must be 18 or older to access this website.`), window.location.href = "https://www.google.com"
+        }
+
+        function a() {
+          o() || setTimeout(c, 500), i && i.addEventListener("click", f), d && d.addEventListener("click", l), t && t.addEventListener("click", function(e) {
+            e.target === t && (e.preventDefault(), e.stopPropagation())
+          }), document.addEventListener("keydown", function(e) {
+            e.key === "Escape" && !o() && e.preventDefault()
+          })
+        }
+        document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", a) : a(), document.addEventListener("astro:page-load", function() {
+          o() || setTimeout(c, 100)
+        })
+      })();
+    </script>
+    )}
+  </body>
+</html>

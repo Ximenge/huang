@@ -1,0 +1,111 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+import AdWidget from "@components/AdWidget.astro";
+import AdWidgetTriple from "@components/AdWidgetTriple.astro";
+import { getCollection } from "astro:content";
+
+const videos = await getCollection("videos");
+const allPosts = await getCollection("posts");
+
+const seriesMap = new Map();
+videos.forEach((video) => {
+  const series = video.data.series;
+  if (!seriesMap.has(series)) {
+    seriesMap.set(series, { description: `${series}系列视频`, videoCount: 0 });
+  }
+  seriesMap.get(series).videoCount += video.data.videoCount;
+});
+
+const seriesList = Array.from(seriesMap.entries()).map(([name, data]) => ({
+  name,
+  description: data.description,
+  slug: name,
+  videoCount: data.videoCount
+}));
+---
+
+<BaseLayout title="视频分区" description="91图图网视频分区">
+  <main>
+    <section class="mx-auto max-w-6xl">
+      <div class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100 md:text-4xl">
+          视频分区
+        </h1>
+        <p class="mt-3 text-lg text-neutral-600 dark:text-neutral-400">
+          精选优质视频系列
+        </p>
+      </div>
+
+      <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {
+          seriesList.slice(0, -3).map((series) => (
+            <a
+              href={`/videos/${series.slug}/`}
+              class="group block overflow-hidden rounded-xl bg-white dark:bg-neutral-900 shadow-sm border border-neutral-200 dark:border-neutral-700 transition-all duration-200 hover:shadow-lg hover:-translate-y-1"
+            >
+              <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {series.name}
+                    </h3>
+                    <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+                      {series.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
+                    {series.videoCount} 个视频
+                  </span>
+                  <svg class="h-5 w-5 text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </div>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+      
+      <!-- 广告区域 - 3个广告 -->
+      <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <AdWidgetTriple posts={allPosts} />
+      </div>
+      
+      <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {
+          seriesList.slice(-3).map((series) => (
+            <a
+              href={`/videos/${series.slug}/`}
+              class="group block overflow-hidden rounded-xl bg-white dark:bg-neutral-900 shadow-sm border border-neutral-200 dark:border-neutral-700 transition-all duration-200 hover:shadow-lg hover:-translate-y-1"
+            >
+              <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {series.name}
+                    </h3>
+                    <p class="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
+                      {series.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
+                    {series.videoCount} 个视频
+                  </span>
+                  <svg class="h-5 w-5 text-neutral-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </div>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </section>
+  </main>
+</BaseLayout>
