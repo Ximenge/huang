@@ -45,7 +45,7 @@ export const SocialLinks = [
   { href: "/rss.xml", icon: "icon-[tabler--rss]", label: "RSS" },
 ];
 
-export const POPUNDER_ENABLED = true;
+export const POPUNDER_ENABLED = false;
 export const POPUNDER_IDZONE = "5866630";
 export const POPUNDER_FREQUENCY_PERIOD = 60;
 export const POPUNDER_FREQUENCY_COUNT = 1;
