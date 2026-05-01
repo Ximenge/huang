@@ -1,0 +1,443 @@
+---
+interface Props {
+  postId: string;
+}
+
+const { postId } = Astro.props;
+---
+
+<div id="post-comments" data-post-id={postId} class="mt-8 max-w-4xl mx-auto">
+  <div class="bg-base-200 rounded-xl p-6 shadow-sm mb-6">
+    <h2 class="text-xl font-bold mb-4 text-neutral-900 dark:text-neutral-100">
+      💬 评论区
+    </h2>
+    <form id="comment-form" class="space-y-4">
+      <div>
+        <label for="comment-nickname" class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+          昵称 <span class="text-neutral-400 text-xs">（选填，不填则随机生成）</span>
+        </label>
+        <input
+          type="text"
+          id="comment-nickname"
+          name="nickname"
+          maxlength="20"
+          class="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-base-100 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="输入你的昵称..."
+        />
+      </div>
+      <div>
+        <label for="comment-content" class="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+          内容
+        </label>
+        <textarea
+          id="comment-content"
+          name="content"
+          rows="3"
+          maxlength="500"
+          required
+          class="w-full px-4 py-2 rounded-lg border border-neutral-300 dark:border-neutral-600 bg-base-100 text-neutral-900 dark:text-neutral-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          placeholder="写下你的评论..."
+        ></textarea>
+        <div class="text-xs text-neutral-500 mt-1">
+          <span id="char-count">0</span>/500
+        </div>
+      </div>
+      <button
+        type="submit"
+        id="submit-btn"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        发表评论
+      </button>
+    </form>
+    <div id="form-message" class="mt-4 text-sm hidden"></div>
+  </div>
+
+  <div class="bg-base-200 rounded-xl p-4 shadow-sm mb-6">
+    <h3 class="text-sm font-semibold text-neutral-900 dark:text-neutral-100 mb-2">
+      评论规则
+    </h3>
+    <ul class="text-xs text-neutral-600 dark:text-neutral-400 space-y-1">
+      <li>• 每分钟只能提交一条评论</li>
+      <li>• 内容长度 2-500 字</li>
+      <li>• 请文明发言，禁止刷屏</li>
+      <li>• 昵称最多20字，不填则随机生成</li>
+    </ul>
+  </div>
+
+  <div id="comments-list" class="space-y-4">
+    <div id="loading-indicator" class="text-center py-8 text-neutral-500">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+      <p>加载评论中...</p>
+    </div>
+  </div>
+  <div id="load-more-trigger" class="h-4"></div>
+</div>
+
+<script>
+  interface PostComment {
+    id: string;
+    postId: string;
+    nickname: string;
+    content: string;
+    timestamp: number;
+    likes: number;
+  }
+
+  interface Pagination {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  }
+
+  interface ApiResponse {
+    comments: PostComment[];
+    pagination: Pagination;
+  }
+
+  let currentPage = 1;
+  let isLoading = false;
+  let hasMore = true;
+  let totalComments = 0;
+  const limit = 10;
+
+  function getPostId(): string {
+    var container = document.getElementById('post-comments');
+    return container ? (container.getAttribute('data-post-id') || '') : '';
+  }
+
+  function getFingerprint(): string {
+    var fp = localStorage.getItem('post_comment_fp');
+    if (!fp) {
+      fp = 'fp_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+      localStorage.setItem('post_comment_fp', fp);
+    }
+    return fp;
+  }
+
+  function getSavedNickname(): string {
+    return localStorage.getItem('post_comment_nickname') || '';
+  }
+
+  function saveNickname(name: string) {
+    localStorage.setItem('post_comment_nickname', name);
+  }
+
+  function formatTimeAgo(timestamp: number): string {
+    var now = Date.now();
+    var diff = now - timestamp;
+    var seconds = Math.floor(diff / 1000);
+    var minutes = Math.floor(seconds / 60);
+    var hours = Math.floor(minutes / 60);
+    var days = Math.floor(hours / 24);
+    if (seconds < 60) return '刚刚';
+    if (minutes < 60) return minutes + '分钟前';
+    if (hours < 24) return hours + '小时前';
+    if (days < 30) return days + '天前';
+    return new Date(timestamp).toLocaleDateString('zh-CN');
+  }
+
+  function isLiked(commentId: string): boolean {
+    var liked = localStorage.getItem('post_comment_liked') || '';
+    return liked.split(',').indexOf(commentId) !== -1;
+  }
+
+  function markLiked(commentId: string) {
+    var liked = localStorage.getItem('post_comment_liked') || '';
+    var arr = liked ? liked.split(',') : [];
+    if (arr.indexOf(commentId) === -1) {
+      arr.push(commentId);
+      localStorage.setItem('post_comment_liked', arr.join(','));
+    }
+  }
+
+  function renderComment(comment: PostComment): string {
+    var liked = isLiked(comment.id);
+    var likeClass = liked ? 'text-red-500' : 'text-neutral-400 hover:text-red-400';
+    var likeIcon = liked
+      ? '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>'
+      : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>';
+
+    return '<div class="bg-base-200 rounded-xl p-4 shadow-sm" data-comment-id="' + comment.id + '">'
+      + '<div class="flex items-start justify-between mb-2">'
+        + '<div class="flex items-center gap-2">'
+          + '<div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">'
+            + comment.nickname.charAt(0).toUpperCase()
+          + '</div>'
+          + '<span class="font-semibold text-neutral-900 dark:text-neutral-100">' + comment.nickname + '</span>'
+        + '</div>'
+        + '<span class="text-xs text-neutral-500" data-timestamp="' + comment.timestamp + '">' + formatTimeAgo(comment.timestamp) + '</span>'
+      + '</div>'
+      + '<p class="text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap break-words mb-3">' + comment.content + '</p>'
+      + '<div class="flex items-center gap-1 ' + likeClass + ' cursor-pointer like-btn" data-comment-id="' + comment.id + '">'
+        + likeIcon
+        + '<span class="text-xs like-count">' + (comment.likes || 0) + '</span>'
+      + '</div>'
+    + '</div>';
+  }
+
+  function renderEmptyState(): string {
+    return '<div class="text-center py-12 text-neutral-500">'
+      + '<svg class="w-12 h-12 mx-auto mb-2 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>'
+      + '<p>还没有评论，快来抢沙发吧！</p>'
+    + '</div>';
+  }
+
+  function renderNoMore(): string {
+    return '<div id="no-more" class="text-center py-4 text-neutral-400 text-sm"><p>没有更多评论了</p></div>';
+  }
+
+  function renderLoadingMore(): string {
+    return '<div id="loading-more" class="text-center py-4 text-neutral-500"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-1"></div><p class="text-sm">加载更多...</p></div>';
+  }
+
+  async function loadComments(page: number, append: boolean) {
+    if (isLoading) return;
+    isLoading = true;
+
+    var postId = getPostId();
+    if (!postId) { isLoading = false; return; }
+
+    var commentsList = document.getElementById('comments-list');
+    var loadingIndicator = document.getElementById('loading-indicator');
+    if (!commentsList) { isLoading = false; return; }
+
+    if (!append && loadingIndicator) {
+      loadingIndicator.style.display = 'block';
+    }
+
+    try {
+      var response = await fetch('/api/post-comments?postId=' + encodeURIComponent(postId) + '&page=' + page + '&limit=' + limit, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch');
+      var data: ApiResponse = await response.json();
+
+      if (!append) {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+        if (commentsList) commentsList.innerHTML = '';
+      }
+
+      var existingLoadingMore = document.getElementById('loading-more');
+      if (existingLoadingMore) existingLoadingMore.remove();
+
+      if (data.comments.length === 0 && !append) {
+        if (commentsList) commentsList.innerHTML = renderEmptyState();
+      } else {
+        data.comments.forEach(function(comment) {
+          if (commentsList) commentsList.insertAdjacentHTML('beforeend', renderComment(comment));
+        });
+      }
+
+      currentPage = data.pagination.page;
+      hasMore = data.pagination.hasMore;
+      totalComments = data.pagination.total;
+
+      if (!hasMore && data.pagination.total > 0) {
+        commentsList.insertAdjacentHTML('beforeend', renderNoMore());
+      }
+
+      bindLikeButtons();
+    } catch (error) {
+      if (!append && loadingIndicator) {
+        loadingIndicator.style.display = 'none';
+        commentsList.innerHTML = '<div class="text-center py-12 text-red-500"><p>加载失败，请刷新页面重试</p></div>';
+      }
+    } finally {
+      isLoading = false;
+    }
+  }
+
+  function bindLikeButtons() {
+    document.querySelectorAll('.like-btn').forEach(function(btn) {
+      btn.removeEventListener('click', handleLike);
+      btn.addEventListener('click', handleLike);
+    });
+  }
+
+  async function handleLike(e: Event) {
+    var btn = e.currentTarget as HTMLElement;
+    var commentId = btn.getAttribute('data-comment-id');
+    if (!commentId) return;
+
+    if (isLiked(commentId)) return;
+
+    markLiked(commentId);
+    var countEl = btn.querySelector('.like-count');
+    var currentCount = parseInt(countEl?.textContent || '0') || 0;
+    if (countEl) countEl.textContent = String(currentCount + 1);
+    btn.classList.remove('text-neutral-400', 'hover:text-red-400');
+    btn.classList.add('text-red-500');
+    btn.querySelector('svg')!.outerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+
+    var postId = getPostId();
+    var fingerprint = getFingerprint();
+
+    try {
+      var response = await fetch('/api/post-comments', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId: commentId, postId: postId, fingerprint: fingerprint })
+      });
+
+      var data = await response.json() as { success?: boolean; likes?: number; error?: string };
+
+      if (!response.ok || !data.success) {
+        if (countEl) countEl.textContent = String(currentCount);
+      } else if (countEl && data.likes !== undefined) {
+        countEl.textContent = String(data.likes);
+      }
+    } catch (error) {
+      if (countEl) countEl.textContent = String(currentCount);
+    }
+  }
+
+  async function handleSubmit(e: Event) {
+    e.preventDefault();
+
+    var form = e.target as HTMLFormElement;
+    var submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    var messageDiv = document.getElementById('form-message') as HTMLDivElement;
+    var contentInput = document.getElementById('comment-content') as HTMLTextAreaElement;
+    var nicknameInput = document.getElementById('comment-nickname') as HTMLInputElement;
+    var content = contentInput.value.trim();
+    var nickname = nicknameInput.value.trim();
+
+    if (content.length < 2) {
+      messageDiv.textContent = '内容太短了，至少2个字';
+      messageDiv.className = 'mt-4 text-sm text-red-600';
+      messageDiv.classList.remove('hidden');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '提交中...';
+    messageDiv.classList.add('hidden');
+
+    var postId = getPostId();
+
+    try {
+      var response = await fetch('/api/post-comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: postId, nickname: nickname, content: content })
+      });
+
+      var data = await response.json() as { success?: boolean; comment?: PostComment; error?: string };
+
+      if (response.ok && data.success) {
+        if (nickname) saveNickname(nickname);
+        if (data.comment && data.comment.nickname) {
+          saveNickname(data.comment.nickname);
+          nicknameInput.value = data.comment.nickname;
+        }
+
+        form.reset();
+        document.getElementById('char-count')!.textContent = '0';
+        nicknameInput.value = data.comment ? data.comment.nickname : nickname;
+
+        messageDiv.textContent = '评论成功！';
+        messageDiv.className = 'mt-4 text-sm text-green-600';
+        messageDiv.classList.remove('hidden');
+
+        totalComments++;
+        var commentsList = document.getElementById('comments-list');
+        if (commentsList) {
+          var existingEmpty = commentsList.querySelector('.text-center.py-12');
+          if (existingEmpty) commentsList.innerHTML = '';
+
+          var existingNoMore = document.getElementById('no-more');
+          if (existingNoMore) existingNoMore.remove();
+
+          var tempDiv = document.createElement('div');
+          tempDiv.innerHTML = renderComment(data.comment!);
+          var newEl = tempDiv.firstElementChild as HTMLElement;
+          newEl.style.opacity = '0';
+          newEl.style.transform = 'translateY(-10px)';
+          newEl.style.transition = 'opacity 0.3s, transform 0.3s';
+          commentsList.insertAdjacentElement('afterbegin', newEl);
+          requestAnimationFrame(function() {
+            newEl.style.opacity = '1';
+            newEl.style.transform = 'translateY(0)';
+          });
+          bindLikeButtons();
+        }
+      } else {
+        messageDiv.textContent = data.error || '提交失败，请重试';
+        messageDiv.className = 'mt-4 text-sm text-red-600';
+        messageDiv.classList.remove('hidden');
+      }
+    } catch (error) {
+      messageDiv.textContent = '网络错误，请重试';
+      messageDiv.className = 'mt-4 text-sm text-red-600';
+      messageDiv.classList.remove('hidden');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '发表评论';
+    }
+  }
+
+  function setupInfiniteScroll() {
+    var trigger = document.getElementById('load-more-trigger');
+    if (!trigger) return;
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting && hasMore && !isLoading) {
+          loadComments(currentPage + 1, true);
+        }
+      });
+    }, { rootMargin: '100px' });
+    observer.observe(trigger);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var postId = getPostId();
+    if (!postId) return;
+
+    var savedName = getSavedNickname();
+    if (savedName) {
+      var nicknameInput = document.getElementById('comment-nickname') as HTMLInputElement;
+      if (nicknameInput) nicknameInput.value = savedName;
+    }
+
+    loadComments(1, false);
+    setupInfiniteScroll();
+
+    var form = document.getElementById('comment-form');
+    form?.addEventListener('submit', handleSubmit);
+
+    var contentInput = document.getElementById('comment-content') as HTMLTextAreaElement;
+    var charCount = document.getElementById('char-count') as HTMLElement;
+    contentInput?.addEventListener('input', function() {
+      charCount.textContent = contentInput.value.length.toString();
+    });
+  });
+
+  document.addEventListener('astro:page-load', function() {
+    var postId = getPostId();
+    if (!postId) return;
+
+    var savedName = getSavedNickname();
+    if (savedName) {
+      var nicknameInput = document.getElementById('comment-nickname') as HTMLInputElement;
+      if (nicknameInput) nicknameInput.value = savedName;
+    }
+
+    currentPage = 1;
+    hasMore = true;
+    totalComments = 0;
+    loadComments(1, false);
+    setupInfiniteScroll();
+
+    var form = document.getElementById('comment-form');
+    form?.removeEventListener('submit', handleSubmit);
+    form?.addEventListener('submit', handleSubmit);
+
+    var contentInput = document.getElementById('comment-content') as HTMLTextAreaElement;
+    var charCount = document.getElementById('char-count') as HTMLElement;
+    contentInput?.removeEventListener('input', function() {});
+    contentInput?.addEventListener('input', function() {
+      charCount.textContent = contentInput.value.length.toString();
+    });
+  });
+</script>

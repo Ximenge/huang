@@ -19,6 +19,10 @@ id = "98545db89c3a4b0191d8daff2471ae87"
 binding = "STATS"
 id = "06c6a246840b4d258daf1566c9deb31f"
 
+[[kv_namespaces]]
+binding = "POST_COMMENTS"
+id = "e5fe071d2e6f48769eec01fb63e59b3e"
+
 # 预览环境配置
 [env.preview]
 [[env.preview.kv_namespaces]]
@@ -27,4 +31,7 @@ id = "98545db89c3a4b0191d8daff2471ae87"
 [[env.preview.kv_namespaces]]
 binding = "STATS"
 id = "06c6a246840b4d258daf1566c9deb31f"
+[[env.preview.kv_namespaces]]
+binding = "POST_COMMENTS"
+id = "e5fe071d2e6f48769eec01fb63e59b3e"
 

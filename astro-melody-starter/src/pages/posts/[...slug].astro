@@ -6,6 +6,7 @@ import FormattedDate from "@components/FormattedDate.astro";
 import DownloadAllImages from "@components/DownloadAllImages.astro";
 import InArticleAd from "@components/InArticleAd.astro";
 import DownloadPopunder from "@components/DownloadPopunder.astro";
+import PostComments from "@components/PostComments.astro";
 import { DOWNLOAD_POPUNDER_ENABLED } from "@consts";
 
 export async function getStaticPaths() {
@@ -83,6 +84,8 @@ const imageURL = post.data.cover ? new URL(post.data.cover, Astro.site).toString
         currentSlug={post.id}
       />
     </div>
+
+    <PostComments postId={post.id} />
   </main>
 
   {DOWNLOAD_POPUNDER_ENABLED && <DownloadPopunder />}

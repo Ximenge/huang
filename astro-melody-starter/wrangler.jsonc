@@ -31,6 +31,11 @@
 			"binding": "STATS",
 			"id": "06c6a246840b4d258daf1566c9deb31f",
 			"remote": true
+		},
+		{
+			"binding": "POST_COMMENTS",
+			"id": "e5fe071d2e6f48769eec01fb63e59b3e",
+			"remote": true
 		}
 	]
 }
