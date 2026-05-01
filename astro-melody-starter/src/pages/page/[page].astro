@@ -7,16 +7,14 @@ import Pagination from "@components/Pagination.astro";
 import AdWidget from "@components/AdWidget.astro";
 import AdWidgetTriple from "@components/AdWidgetTriple.astro";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@consts";
+import { sortPosts } from "@utils/sortPosts";
 
 export async function getStaticPaths() {
   const allPosts = await getCollection("posts");
-  allPosts.sort(
-    (a, b) =>
-      new Date(b.data.pubDate).valueOf() - new Date(a.data.pubDate).valueOf(),
-  );
+  const sortedPosts = sortPosts(allPosts);
 
-  const firstPagePosts = allPosts.slice(0, 15);
-  const remainingPosts = allPosts.slice(15);
+  const firstPagePosts = sortedPosts.slice(0, 15);
+  const remainingPosts = sortedPosts.slice(15);
   const totalPages = 1 + Math.ceil(remainingPosts.length / 12);
 
   const paths = [
@@ -28,7 +26,7 @@ export async function getStaticPaths() {
           currentPage: 1,
           lastPage: totalPages,
         },
-        allPosts: allPosts,
+        allPosts: sortedPosts,
       },
     },
   ];
@@ -39,7 +37,7 @@ export async function getStaticPaths() {
       params: { page: i.toString() },
       props: {
         page: { data: pagePosts, currentPage: i, lastPage: totalPages },
-        allPosts: allPosts,
+        allPosts: sortedPosts,
       },
     });
   }

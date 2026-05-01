@@ -35,7 +35,7 @@ const isBot = botUserAgents.some(bot => userAgent.toLowerCase().includes(bot));
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <BaseHead title={title} description={description} />
   </head>
@@ -178,4 +178,81 @@ You must be 18 or older to access this website.`), window.location.href = "https
     </script>
     )}
   </body>
+
+  <script is:inline>
+    (function() {
+      var _viewCache = {};
+
+      function formatCount(count) {
+        if (count >= 10000) return (count / 10000).toFixed(1) + '万';
+        if (count >= 1000) return (count / 1000).toFixed(1) + 'k';
+        return count.toString();
+      }
+
+      function updateViewCountUI(slug, count) {
+        _viewCache[slug] = count;
+        var elements = document.querySelectorAll('[data-view-count]');
+        elements.forEach(function(el) {
+          if (el.getAttribute('data-view-count') === slug) {
+            el.textContent = formatCount(count);
+          }
+        });
+      }
+
+      window.__updateViewCount = updateViewCountUI;
+
+      function loadViewCounts() {
+        var elements = document.querySelectorAll('[data-view-count]');
+        if (elements.length === 0) return;
+
+        var slugs = [];
+        elements.forEach(function(el) {
+          var slug = el.getAttribute('data-view-count');
+          if (slug && slugs.indexOf(slug) === -1) {
+            slugs.push(slug);
+          }
+        });
+
+        if (slugs.length === 0) return;
+
+        var batchSize = 50;
+        for (var i = 0; i < slugs.length; i += batchSize) {
+          (function(batch) {
+            fetch('/api/stats/views/?slugs=' + batch.join(',') + '&_t=' + Date.now(), {
+              cache: 'no-store'
+            })
+              .then(function(res) { return res.json(); })
+              .then(function(data) {
+                elements.forEach(function(el) {
+                  var slug = el.getAttribute('data-view-count');
+                  if (data[slug] !== undefined) {
+                    _viewCache[slug] = data[slug];
+                    el.textContent = formatCount(data[slug]);
+                  }
+                });
+              })
+              .catch(function() {
+                elements.forEach(function(el) {
+                  var slug = el.getAttribute('data-view-count');
+                  if (_viewCache[slug] !== undefined) {
+                    el.textContent = formatCount(_viewCache[slug]);
+                  } else {
+                    el.textContent = '';
+                  }
+                });
+              });
+          })(slugs.slice(i, i + batchSize));
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadViewCounts);
+      } else {
+        loadViewCounts();
+      }
+      document.addEventListener('astro:page-load', function() {
+        setTimeout(loadViewCounts, 300);
+      });
+    })();
+  </script>
 </html>

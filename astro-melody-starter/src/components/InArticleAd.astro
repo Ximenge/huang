@@ -1,0 +1,126 @@
+---
+// InArticleAd.astro - 文章内嵌原生广告（第一张图和第二张图之间）
+// Zone ID: 5910390
+// HTML结构: <p><img></p> <p><img></p>  每张图被<p>包裹
+// 插入策略: 找到第2个包含img的<p>，在其前面插入广告
+---
+
+<div id="inArticleAdContainer" class="in-article-ad-hidden">
+  <script is:inline async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+  <ins class="eas6a97888e2" data-zoneid="5910390"></ins>
+  <script is:inline>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+</div>
+
+<script is:inline>
+(function() {
+  function insertAd() {
+    var adContainer = document.getElementById('inArticleAdContainer');
+    if (!adContainer) return;
+
+    var allP = document.querySelectorAll('article.prose p');
+    var imgPCount = 0;
+    var targetP = null;
+
+    for (var i = 0; i < allP.length; i++) {
+      if (allP[i].querySelector('img')) {
+        imgPCount++;
+        if (imgPCount === 2) {
+          targetP = allP[i];
+          break;
+        }
+      }
+    }
+
+    if (targetP) {
+      targetP.parentNode.insertBefore(adContainer, targetP);
+      adContainer.className = 'in-article-ad-visible';
+      return true;
+    }
+
+    if (imgPCount === 1) {
+      var firstImgP = null;
+      for (var j = 0; j < allP.length; j++) {
+        if (allP[j].querySelector('img')) {
+          firstImgP = allP[j];
+          break;
+        }
+      }
+      if (firstImgP && firstImgP.nextSibling) {
+        firstImgP.parentNode.insertBefore(adContainer, firstImgP.nextSibling);
+        adContainer.className = 'in-article-ad-visible';
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function tryInsert() {
+    var attempts = 0;
+    var maxAttempts = 30;
+
+    function attempt() {
+      attempts++;
+      var success = insertAd();
+      if (!success && attempts < maxAttempts) {
+        setTimeout(attempt, 300);
+      }
+    }
+
+    attempt();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', tryInsert);
+  } else {
+    tryInsert();
+  }
+
+  document.addEventListener('astro:page-load', function() {
+    setTimeout(tryInsert, 500);
+  });
+})();
+</script>
+
+<style>
+  .in-article-ad-hidden {
+    display: none;
+  }
+
+  .in-article-ad-visible {
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    max-height: 100px;
+    overflow: hidden;
+    margin: 20px auto;
+    text-align: center;
+    background: transparent;
+    clear: both;
+  }
+
+  .in-article-ad-visible ins.eas6a97888e2 {
+    display: block !important;
+    width: 100% !important;
+    background: transparent !important;
+  }
+
+  .in-article-ad-visible .exo-native-widget {
+    width: 300px !important;
+    height: 100px !important;
+    margin: 0 auto !important;
+  }
+
+  @media (max-width: 640px) {
+    .in-article-ad-visible {
+      max-width: 100%;
+      padding: 0 10px;
+    }
+
+    .in-article-ad-visible .exo-native-widget {
+      width: 100% !important;
+      height: auto !important;
+    }
+  }
+</style>

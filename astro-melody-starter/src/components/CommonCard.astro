@@ -17,6 +17,13 @@ const { post } = Astro.props;
     <figure class="h-full">
       <OptimizedCover src={post.data.cover} alt={post.data.coverAlt} class="h-full w-full object-cover" />
     </figure>
+    <div class="absolute bottom-3 right-3 z-10 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-0.5 text-white text-xs pointer-events-none">
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+      </svg>
+      <span data-view-count={post.id}>-</span>
+    </div>
     <div class="absolute bottom-0 left-0 right-0 p-4 text-white bg-gradient-to-t from-black/70 to-transparent">
       <div class="flex items-center gap-1 text-xs">
         {

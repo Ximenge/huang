@@ -51,6 +51,11 @@ export const POPUNDER_FREQUENCY_PERIOD = 60;
 export const POPUNDER_FREQUENCY_COUNT = 1;
 export const POPUNDER_TRIGGER_METHOD = 1;
 
+export const DOWNLOAD_POPUNDER_ENABLED = true;
+export const DOWNLOAD_POPUNDER_IDZONE = "5914280";
+
+export const PIN_ORDER_ENABLED = true;
+
 // Search Page Metadata, src/pages/search.astro
 export const SEARCH_PAGE_TITLE = `${SITE_TITLE} - 站点搜索`;
 export const SEARCH_PAGE_DESCRIPTION = `搜索 ${SITE_TITLE} 上的所有内容`;

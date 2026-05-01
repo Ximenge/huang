@@ -1,0 +1,30 @@
+---
+import { DOWNLOAD_POPUNDER_ENABLED, DOWNLOAD_POPUNDER_IDZONE } from "@consts";
+
+if (!DOWNLOAD_POPUNDER_ENABLED) {
+  return;
+}
+
+const dlIdzone = DOWNLOAD_POPUNDER_IDZONE;
+---
+
+<script is:inline define:vars={{ dlIdzone }}>
+(function() {
+    function openPopunderAd() {
+        var adUrl = "https://s.pemsrv.com/v1/link.php?cat=&idzone=" + dlIdzone + "&type=8&p=" + encodeURIComponent(window.location.href) + "&cb=" + Math.floor(Math.random() * 1e9);
+        window.open(adUrl, "_blank");
+    }
+
+    function init() {
+        var buttons = document.querySelectorAll(".download-pop-trigger");
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].addEventListener("click", function() {
+                openPopunderAd();
+            });
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("astro:page-load", init);
+})();
+</script>

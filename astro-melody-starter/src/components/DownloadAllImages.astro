@@ -1,185 +1,263 @@
 ---
+import { DOWNLOAD_POPUNDER_ENABLED } from "@consts";
+
+interface Props {
+  postTitle: string;
+}
+
+const { postTitle } = Astro.props;
 ---
 
-<div class="not-prose bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-600 rounded-lg p-4 my-4">
-  <div class="flex items-center gap-3 flex-wrap">
-    点击这里直接下载压缩过的图包:
-    <button id="download-all-images" class="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors duration-200 cursor-pointer">
-      点击下载 ZIP
+<div class="not-prose my-6">
+  <div class="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 border border-blue-200 dark:border-gray-600 rounded-lg">
+    <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+    </svg>
+    <span class="text-sm text-gray-700 dark:text-gray-300">下载本页全部图片：</span>
+    <button id="download-all-images" class="download-pop-trigger inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-md transition-colors duration-200 cursor-pointer">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+      </svg>
+      下载 ZIP
     </button>
-    <span id="download-status" class="text-sm text-gray-600 dark:text-gray-400 ml-2"></span>
+    <span id="download-count" class="text-xs text-gray-500 dark:text-gray-400 ml-1">已下载 <span id="download-count-number">-</span> 次</span>
+    <span id="download-status" class="text-xs text-gray-500 dark:text-gray-400 ml-1"></span>
   </div>
+  {DOWNLOAD_POPUNDER_ENABLED && (
+    <div class="mt-2 flex items-center gap-1.5 px-1">
+      <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path>
+      </svg>
+      <span class="text-xs font-medium text-amber-600 dark:text-amber-400">点击下载按钮将弹出广告，请提前注意，文件将正常下载</span>
+    </div>
+  )}
 </div>
 
 <script is:inline>
   (function() {
+    var CONCURRENCY = 5;
+
+    function getZipFileName() {
+      var el = document.getElementById('download-post-title');
+      var name = el ? el.textContent.trim() : 'images';
+      return name.replace(/[\/\\:*?"<>|]/g, '_');
+    }
+
     function downloadAllImages() {
-      const statusElement = document.getElementById('download-status');
+      reportDownload();
+
+      var zipFileName = getZipFileName();
+      var statusElement = document.getElementById('download-status');
+      var button = document.getElementById('download-all-images');
+      button.disabled = true;
+      button.classList.add('opacity-50', 'cursor-not-allowed');
       statusElement.textContent = '正在收集图片...';
-      
-      // 收集所有图片
-      const images = document.querySelectorAll('img');
-      const imageList = [];
-      
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i];
-        if (img.src && 
-            !img.src.includes('data:image') && 
-            !img.src.includes('ads') && 
-            !img.src.includes('pagefind') &&
-            !img.src.includes('close-icon') &&
-            !img.src.includes('s3t3d2y1.afcdn.net')) {
-          imageList.push(img);
-        }
-      }
-      
-      if (imageList.length === 0) {
-        statusElement.textContent = '未找到可下载的图片';
+
+      var article = document.querySelector('article');
+      if (!article) {
+        statusElement.textContent = '未找到文章内容';
+        resetButton();
         return;
       }
-      
-      statusElement.textContent = `找到 ${imageList.length} 张图片，正在处理...`;
-      console.log('找到的图片:', imageList.map(img => img.src));
-      
-      // 加载 JSZip
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
-      script.onload = function() {
-        console.log('JSZip 加载成功');
-        const zip = new JSZip();
-        let completed = 0;
-        let successCount = 0;
-        
-        // 使用 Canvas 从已加载的图片中提取数据
-        imageList.forEach((img, index) => {
-          console.log(`处理第 ${index + 1} 张图片:`, img.src);
-          
-          try {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            
-            // 设置画布大小与图片一致
-            canvas.width = img.naturalWidth || img.width;
-            canvas.height = img.naturalHeight || img.height;
-            
-            // 绘制图片到画布
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            
-            // 将画布转换为 Blob
-            canvas.toBlob((blob) => {
-              if (blob) {
-                successCount++;
-                console.log(`第 ${index + 1} 张图片处理成功，大小: ${blob.size} bytes`);
-                const fileName = img.src.split('/').pop() || `image-${index + 1}.jpg`;
-                zip.file(`${String(index + 1).padStart(3, '0')}-${fileName}`, blob);
-              } else {
-                console.warn(`第 ${index + 1} 张图片转换失败:`, img.src);
-              }
-              
-              completed++;
-              statusElement.textContent = `正在处理 ${completed}/${imageList.length} 张图片...`;
-              console.log(`处理进度: ${completed}/${imageList.length}`);
-              
-              if (completed === imageList.length) {
-                console.log(`处理完成，成功: ${successCount}，失败: ${imageList.length - successCount}`);
-                
-                if (successCount === 0) {
-                  statusElement.textContent = '所有图片处理失败，请重试';
-                  return;
-                }
-                
-                statusElement.textContent = '正在生成 ZIP 文件...';
-                console.log('开始生成 ZIP 文件');
-                
-                // 生成并下载 ZIP
-                zip.generateAsync({ 
-                  type: 'blob',
-                  compression: 'DEFLATE',
-                  compressionOptions: { level: 6 }
-                })
-                .then(function(blob) {
-                  console.log('ZIP 生成成功，大小:', blob.size, 'bytes');
-                  const link = document.createElement('a');
-                  link.href = URL.createObjectURL(blob);
-                  link.download = 'images.zip';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  
-                  if (successCount === imageList.length) {
-                    statusElement.textContent = '下载完成！';
-                  } else {
-                    statusElement.textContent = `下载完成（成功: ${successCount}/${imageList.length}）！`;
-                  }
-                  
-                  setTimeout(() => {
-                    statusElement.textContent = '';
-                  }, 3000);
-                })
-                .catch(function(error) {
-                  console.error('ZIP 生成失败:', error);
-                  statusElement.textContent = '下载失败，请重试';
-                });
-              }
-            }, 'image/jpeg', 0.9);
-          } catch (error) {
-            console.error(`第 ${index + 1} 张图片处理错误:`, img.src, error);
-            
-            completed++;
-            statusElement.textContent = `正在处理 ${completed}/${imageList.length} 张图片...`;
-            
-            if (completed === imageList.length) {
-              console.log(`处理完成，成功: ${successCount}，失败: ${imageList.length - successCount}`);
-              
-              if (successCount === 0) {
-                statusElement.textContent = '所有图片处理失败，请重试';
-                return;
-              }
-              
-              statusElement.textContent = '正在生成 ZIP 文件...';
-              
-              zip.generateAsync({ 
-                type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 }
-              })
-              .then(function(blob) {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'images.zip';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                statusElement.textContent = `下载完成（成功: ${successCount}/${imageList.length}）！`;
-                
-                setTimeout(() => {
-                  statusElement.textContent = '';
-                }, 3000);
-              })
-              .catch(function(error) {
-                console.error('ZIP 生成失败:', error);
-                statusElement.textContent = '下载失败，请重试';
-              });
-            }
-          }
-        });
-      };
-      
+
+      var images = article.querySelectorAll('img');
+      var imageUrls = [];
+
+      for (var i = 0; i < images.length; i++) {
+        var img = images[i];
+        if (img.src &&
+            !img.src.includes('data:image') &&
+            !img.src.includes('pagefind') &&
+            !img.src.includes('close-icon') &&
+            !img.src.includes('afcdn.net') &&
+            img.naturalWidth > 50 &&
+            img.naturalHeight > 50) {
+          imageUrls.push(img.src);
+        }
+      }
+
+      if (imageUrls.length === 0) {
+        statusElement.textContent = '未找到可下载的图片';
+        resetButton();
+        return;
+      }
+
+      statusElement.textContent = '找到 ' + imageUrls.length + ' 张图片，正在加载 JSZip...';
+
+      loadJSZip(function() {
+        fetchAndZip(imageUrls, zipFileName, statusElement);
+      }, statusElement);
+    }
+
+    function loadJSZip(onReady, statusElement) {
+      if (typeof JSZip !== 'undefined') {
+        onReady();
+        return;
+      }
+      var script = document.createElement('script');
+      script.src = '/jszip.min.js';
+      script.onload = onReady;
       script.onerror = function() {
-        console.error('JSZip 加载失败');
-        statusElement.textContent = 'JSZip 加载失败，请重试';
+        statusElement.textContent = 'JSZip 加载失败，请刷新重试';
+        resetButton();
       };
-      
       document.head.appendChild(script);
     }
-    
-    // 绑定点击事件
-    document.addEventListener('DOMContentLoaded', function() {
-      const button = document.getElementById('download-all-images');
+
+    function proxyUrl(originalUrl) {
+      return '/api/proxy-image?url=' + encodeURIComponent(originalUrl);
+    }
+
+    function fetchAndZip(imageUrls, zipFileName, statusElement) {
+      var zip = new JSZip();
+      var completed = 0;
+      var successCount = 0;
+      var total = imageUrls.length;
+      var index = 0;
+
+      function next() {
+        if (index >= total) return;
+        var currentIndex = index++;
+        var originalUrl = imageUrls[currentIndex];
+
+        fetch(proxyUrl(originalUrl))
+          .then(function(response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.blob();
+          })
+          .then(function(blob) {
+            successCount++;
+            var urlParts = originalUrl.split('/');
+            var originalName = urlParts[urlParts.length - 1] || 'image';
+            var decodedName = decodeURIComponent(originalName);
+            zip.file(decodedName, blob);
+          })
+          .catch(function(error) {
+            console.warn('图片下载失败:', originalUrl, error);
+          })
+          .finally(function() {
+            completed++;
+            var percent = Math.round((completed / total) * 100);
+            statusElement.textContent = '正在下载 ' + completed + '/' + total + ' (' + percent + '%)';
+            next();
+
+            if (completed === total) {
+              finalizeZip(zip, zipFileName, successCount, total, statusElement);
+            }
+          });
+      }
+
+      for (var i = 0; i < Math.min(CONCURRENCY, total); i++) {
+        next();
+      }
+    }
+
+    function finalizeZip(zip, zipFileName, successCount, total, statusElement) {
+      if (successCount === 0) {
+        statusElement.textContent = '所有图片下载失败，请重试';
+        resetButton();
+        return;
+      }
+
+      statusElement.textContent = '正在生成 ZIP 文件...';
+
+      zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      })
+      .then(function(blob) {
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = zipFileName + '.zip';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+        if (successCount === total) {
+          statusElement.textContent = '下载完成！共 ' + successCount + ' 张图片';
+        } else {
+          statusElement.textContent = '下载完成（成功 ' + successCount + '/' + total + '）';
+        }
+
+        setTimeout(function() {
+          statusElement.textContent = '';
+          resetButton();
+        }, 5000);
+      })
+      .catch(function(error) {
+        console.error('ZIP 生成失败:', error);
+        statusElement.textContent = 'ZIP 生成失败，请重试';
+        resetButton();
+      });
+    }
+
+    function resetButton() {
+      var button = document.getElementById('download-all-images');
       if (button) {
+        button.disabled = false;
+        button.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    function initDownloadButton() {
+      var button = document.getElementById('download-all-images');
+      if (button) {
+        button.removeEventListener('click', downloadAllImages);
         button.addEventListener('click', downloadAllImages);
       }
+    }
+
+    function getSlug() {
+      var path = window.location.pathname;
+      var match = path.match(/\/posts\/([^/]+)\//);
+      return match ? match[1] : null;
+    }
+
+    function reportDownload() {
+      var slug = getSlug();
+      if (!slug) return;
+      fetch('/api/stats/downloads/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: slug })
+      }).then(function(res) { return res.json(); })
+        .then(function(data) {
+          var el = document.getElementById('download-count-number');
+          if (el && data.downloads !== undefined) {
+            el.textContent = data.downloads;
+          }
+        })
+        .catch(function() {});
+    }
+
+    function loadDownloadCount() {
+      var slug = getSlug();
+      if (!slug) return;
+      fetch('/api/stats/downloads/?slug=' + encodeURIComponent(slug) + '&_t=' + Date.now(), {
+        cache: 'no-store'
+      })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var el = document.getElementById('download-count-number');
+          if (el && data.downloads !== undefined) {
+            el.textContent = data.downloads;
+          }
+        })
+        .catch(function() {
+          var el = document.getElementById('download-count-number');
+          if (el) el.textContent = '0';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initDownloadButton();
+      loadDownloadCount();
+    });
+    document.addEventListener('astro:page-load', function() {
+      initDownloadButton();
+      loadDownloadCount();
     });
   })();
 </script>

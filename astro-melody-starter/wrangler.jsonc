@@ -26,6 +26,11 @@
 			"binding": "GUESTBOOK",
 			"id": "98545db89c3a4b0191d8daff2471ae87",
 			"remote": true
+		},
+		{
+			"binding": "STATS",
+			"id": "06c6a246840b4d258daf1566c9deb31f",
+			"remote": true
 		}
 	]
 }

@@ -3,6 +3,10 @@ import { getCollection, render } from "astro:content";
 import BaseLayout from "@layouts/BaseLayout.astro";
 import RelatedPostsCard from "@components/RelatedPostsCard.astro";
 import FormattedDate from "@components/FormattedDate.astro";
+import DownloadAllImages from "@components/DownloadAllImages.astro";
+import InArticleAd from "@components/InArticleAd.astro";
+import DownloadPopunder from "@components/DownloadPopunder.astro";
+import { DOWNLOAD_POPUNDER_ENABLED } from "@consts";
 
 export async function getStaticPaths() {
   const posts = await getCollection("posts");
@@ -30,12 +34,12 @@ const imageURL = post.data.cover ? new URL(post.data.cover, Astro.site).toString
     "dateModified": new Date().toISOString(),
     "author": {
       "@type": "Organization",
-      "name": "Astro Melody",
+      "name": "91图图",
       "url": Astro.site
     },
     "publisher": {
       "@type": "Organization",
-      "name": "Astro Melody",
+      "name": "91图图",
       "url": Astro.site
     },
     "mainEntityOfPage": {
@@ -51,7 +55,10 @@ const imageURL = post.data.cover ? new URL(post.data.cover, Astro.site).toString
       </div>
 
       <div>
+        <span id="download-post-title" class="hidden">{post.data.title}</span>
+        <DownloadAllImages postTitle={post.data.title} />
         <Content />
+        <InArticleAd />
       </div>
       <div class="flex gap-2 prose-a:no-underline">
         {
@@ -77,4 +84,37 @@ const imageURL = post.data.cover ? new URL(post.data.cover, Astro.site).toString
       />
     </div>
   </main>
+
+  {DOWNLOAD_POPUNDER_ENABLED && <DownloadPopunder />}
+
+  <script is:inline>
+    (function() {
+      function reportView() {
+        var path = window.location.pathname;
+        var match = path.match(/\/posts\/([^/]+)\//);
+        if (!match) return;
+        var slug = match[1];
+        fetch('/api/stats/views/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: slug })
+        }).then(function(res) { return res.json(); })
+          .then(function(data) {
+            if (data.views !== undefined && window.__updateViewCount) {
+              window.__updateViewCount(slug, data.views);
+            }
+          })
+          .catch(function() {});
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', reportView);
+      } else {
+        reportView();
+      }
+      document.addEventListener('astro:page-load', function() {
+        setTimeout(reportView, 500);
+      });
+    })();
+  </script>
 </BaseLayout>

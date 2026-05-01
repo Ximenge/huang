@@ -15,9 +15,16 @@ main = "./dist/_worker.js"
 binding = "GUESTBOOK"
 id = "98545db89c3a4b0191d8daff2471ae87"
 
+[[kv_namespaces]]
+binding = "STATS"
+id = "06c6a246840b4d258daf1566c9deb31f"
+
 # 预览环境配置
 [env.preview]
 [[env.preview.kv_namespaces]]
 binding = "GUESTBOOK"
 id = "98545db89c3a4b0191d8daff2471ae87"
+[[env.preview.kv_namespaces]]
+binding = "STATS"
+id = "06c6a246840b4d258daf1566c9deb31f"
 

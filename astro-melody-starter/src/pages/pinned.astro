@@ -1,0 +1,74 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "@layouts/BaseLayout.astro";
+import { PIN_ORDER_ENABLED } from "@consts";
+
+const allPosts = await getCollection("posts");
+const pinnedPosts = allPosts
+  .filter((p) => p.data.pinOrder != null)
+  .sort((a, b) => (a.data.pinOrder ?? 0) - (b.data.pinOrder ?? 0));
+---
+
+<BaseLayout title="置顶博文管理" description="查看所有置顶博文">
+  <div class="mx-auto max-w-4xl px-4 py-8">
+    <h1 class="mb-2 text-2xl font-bold">📌 置顶博文管理</h1>
+    <p class="mb-6 text-sm opacity-70">
+      全局开关 PIN_ORDER_ENABLED = <code class={`rounded px-1.5 py-0.5 text-sm font-bold ${PIN_ORDER_ENABLED ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>{String(PIN_ORDER_ENABLED)}</code>
+    </p>
+
+    {!PIN_ORDER_ENABLED && (
+      <div class="mb-6 rounded-lg border border-yellow-700 bg-yellow-900/30 p-4">
+        <p class="text-yellow-300">⚠️ 置顶排序功能当前已关闭，所有博文按日期排序。如需开启，请修改 <code class="rounded bg-black/30 px-1">consts.ts</code> 中的 <code class="rounded bg-black/30 px-1">PIN_ORDER_ENABLED = true</code></p>
+      </div>
+    )}
+
+    {pinnedPosts.length === 0 ? (
+      <div class="rounded-lg border border-gray-700 bg-gray-900/50 p-8 text-center">
+        <p class="text-lg opacity-70">暂无置顶博文</p>
+        <p class="mt-2 text-sm opacity-50">在博文的 frontmatter 中添加 <code class="rounded bg-black/30 px-1">pinOrder: 1</code> 即可置顶</p>
+      </div>
+    ) : (
+      <div class="space-y-3">
+        <p class="text-sm opacity-70">共 <span class="font-bold text-white">{pinnedPosts.length}</span> 篇置顶博文</p>
+        <div class="overflow-hidden rounded-lg border border-gray-700">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-800">
+              <tr>
+                <th class="px-4 py-3 text-left font-medium">顺序</th>
+                <th class="px-4 py-3 text-left font-medium">标题</th>
+                <th class="px-4 py-3 text-left font-medium">发布日期</th>
+                <th class="px-4 py-3 text-left font-medium">链接</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-700">
+              {pinnedPosts.map((post) => (
+                <tr class="hover:bg-gray-800/50">
+                  <td class="px-4 py-3">
+                    <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-900 text-xs font-bold text-blue-300">
+                      {post.data.pinOrder}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 font-medium">{post.data.title}</td>
+                  <td class="px-4 py-3 opacity-70">{new Date(post.data.pubDate).toISOString().split('T')[0]}</td>
+                  <td class="px-4 py-3">
+                    <a href={`/posts/${post.id}/`} class="text-blue-400 hover:text-blue-300 hover:underline" target="_blank">查看</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    <div class="mt-8 rounded-lg border border-gray-700 bg-gray-900/50 p-4">
+      <h2 class="mb-2 font-bold">使用说明</h2>
+      <ul class="list-inside list-disc space-y-1 text-sm opacity-80">
+        <li>在博文 frontmatter 中添加 <code class="rounded bg-black/30 px-1">pinOrder: 数字</code> 即可置顶</li>
+        <li>数字越小越靠前，<code class="rounded bg-black/30 px-1">pinOrder: 1</code> 排第1位</li>
+        <li>没有 pinOrder 的博文仍按发布日期降序排列</li>
+        <li>修改 <code class="rounded bg-black/30 px-1">consts.ts</code> 中 <code class="rounded bg-black/30 px-1">PIN_ORDER_ENABLED</code> 可全局开关此功能</li>
+      </ul>
+    </div>
+  </div>
+</BaseLayout>
