@@ -43,12 +43,12 @@ const postsData = posts.map(post => ({
     return shuffled[0];
   }
 
-  function fillAdCard(card, post) {
-    var cover = card.querySelector('.ad-cover');
-    var tagsContainer = card.querySelector('.ad-tags');
-    var dateEl = card.querySelector('.ad-date');
-    var titleEl = card.querySelector('.ad-title');
-    var viewCountEl = card.querySelector('.ad-view-count');
+  function fillOverlay(overlay, post) {
+    var cover = overlay.querySelector('.ad-cover');
+    var tagsContainer = overlay.querySelector('.ad-tags');
+    var dateEl = overlay.querySelector('.ad-date');
+    var titleEl = overlay.querySelector('.ad-title');
+    var viewCountEl = overlay.querySelector('.ad-view-count');
 
     if (cover) {
       cover.src = post.cover;
@@ -70,15 +70,6 @@ const postsData = posts.map(post => ({
     }
   }
 
-  function restoreCard(wrapper, originalHTML) {
-    wrapper.innerHTML = originalHTML;
-    wrapper.removeAttribute('data-inline-ad');
-    wrapper.style.cursor = '';
-    if (typeof window.loadViewCounts === 'function') {
-      window.loadViewCounts();
-    }
-  }
-
   function initInlineAd() {
     var allCards = document.querySelectorAll('[data-view-count]');
     var cardWrappers = [];
@@ -88,7 +79,7 @@ const postsData = posts.map(post => ({
       while (wrapper && !wrapper.classList.contains('relative')) {
         wrapper = wrapper.parentElement;
       }
-      if (wrapper && !wrapper.hasAttribute('data-inline-ad') && !wrapper.closest('.ad-box') && !wrapper.closest('[data-ad-index]')) {
+      if (wrapper && !wrapper.querySelector('.inline-ad-overlay') && !wrapper.closest('.ad-box') && !wrapper.closest('[data-ad-index]')) {
         cardWrappers.push(wrapper);
       }
     });
@@ -100,11 +91,12 @@ const postsData = posts.map(post => ({
 
     var randomIndex = Math.floor(Math.random() * candidates.length);
     var targetCard = candidates[randomIndex];
-
-    var originalHTML = targetCard.innerHTML;
     var fakePost = getRandomPost(postsData);
 
-    targetCard.innerHTML =
+    var overlay = document.createElement('div');
+    overlay.className = 'inline-ad-overlay absolute inset-0 z-20 rounded-xl overflow-hidden';
+
+    overlay.innerHTML =
       '<div class="ad-layer absolute inset-0 z-0">' +
         '<ins class="eas6a97888e20" data-zoneid="5863494"></ins>' +
       '</div>' +
@@ -126,27 +118,19 @@ const postsData = posts.map(post => ({
         '</div>' +
       '</div>';
 
-    targetCard.setAttribute('data-inline-ad', 'true');
+    fillOverlay(overlay, fakePost);
 
-    fillAdCard(targetCard, fakePost);
+    targetCard.style.position = 'relative';
+    targetCard.insertBefore(overlay, targetCard.firstChild);
 
-    var adLayer = targetCard.querySelector('.ad-layer');
-    if (adLayer) {
-      var initScript = document.createElement('script');
-      initScript.textContent = '(AdProvider = window.AdProvider || []).push({"serve": {}});';
-      adLayer.appendChild(initScript);
-    }
+    var initScript = document.createElement('script');
+    initScript.textContent = '(AdProvider = window.AdProvider || []).push({"serve": {}});';
+    overlay.querySelector('.ad-layer').appendChild(initScript);
 
-    targetCard.addEventListener('click', function handler(e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      var adUrl = 'https://a.magsrv.com/ddn.php?zoneid=5863494&cb=' + Date.now();
-      window.open(adUrl, '_blank');
-
+    overlay.addEventListener('click', function() {
       setTimeout(function() {
-        restoreCard(targetCard, originalHTML);
-      }, 300);
+        overlay.remove();
+      }, 500);
     }, { once: true });
   }
 
@@ -155,57 +139,57 @@ const postsData = posts.map(post => ({
 </script>
 
 <style>
-  [data-inline-ad="true"] {
+  .inline-ad-overlay {
     cursor: pointer !important;
   }
 
-  [data-inline-ad="true"] .ad-layer {
+  .inline-ad-overlay .ad-layer {
     width: 100% !important;
     height: 100% !important;
   }
 
-  [data-inline-ad="true"] .ad-layer > ins.eas6a97888e20 {
+  .inline-ad-overlay .ad-layer > ins.eas6a97888e20 {
     display: block !important;
     width: 100% !important;
     height: 100% !important;
   }
 
-  [data-inline-ad="true"] .eas6a97888e20 > div[id^="exo-native-widget-"] {
+  .inline-ad-overlay .eas6a97888e20 > div[id^="exo-native-widget-"] {
     width: 100% !important;
     height: 100% !important;
   }
 
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-header {
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-header {
     display: none !important;
   }
 
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-outer-container {
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-outer-container {
     width: 100% !important;
     height: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
   }
 
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-item-container {
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-item-container {
     width: 100% !important;
     height: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
   }
 
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-item {
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-item {
     width: 100% !important;
     height: 100% !important;
   }
 
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-item-image-wrapper,
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-item-image,
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-item-title,
-  [data-inline-ad="true"] .eas6a97888e20 .exo-native-widget-item-text {
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-item-image-wrapper,
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-item-image,
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-item-title,
+  .inline-ad-overlay .eas6a97888e20 .exo-native-widget-item-text {
     display: none !important;
   }
 
-  [data-inline-ad="true"] .content-layer {
+  .inline-ad-overlay .content-layer {
     pointer-events: none !important;
   }
 </style>
