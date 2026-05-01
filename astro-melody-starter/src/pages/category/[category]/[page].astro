@@ -5,6 +5,7 @@ import PostCard from "@components/CommonCard.astro";
 import VideoCard from "@components/VideoCard.astro";
 import AdWidget from "@components/AdWidget.astro";
 import AdWidgetTriple from "@components/AdWidgetTriple.astro";
+import InlineAdReplacer from "@components/InlineAdReplacer.astro";
 import Pagination from "@components/Pagination.astro";
 import { getCategoryMetadata } from "@consts";
 
@@ -78,6 +79,8 @@ const { title, description } = getCategoryMetadata(params.category);
         <PostCard post={item} />
     ))}
   </div>
+
+  <InlineAdReplacer posts={allPosts} skipFirst={0} />
 
   <Pagination
     currentPage={page.currentPage}

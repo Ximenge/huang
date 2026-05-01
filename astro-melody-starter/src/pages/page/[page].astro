@@ -6,6 +6,7 @@ import PostCard from "@components/CommonCard.astro";
 import Pagination from "@components/Pagination.astro";
 import AdWidget from "@components/AdWidget.astro";
 import AdWidgetTriple from "@components/AdWidgetTriple.astro";
+import InlineAdReplacer from "@components/InlineAdReplacer.astro";
 import { SITE_TITLE, SITE_DESCRIPTION } from "@consts";
 import { sortPosts } from "@utils/sortPosts";
 
@@ -98,6 +99,8 @@ const { page, allPosts } = Astro.props;
       </>
     )
   }
+
+  <InlineAdReplacer posts={allPosts} skipFirst={page.currentPage === 1 ? 3 : 0} />
 
   <Pagination
     currentPage={page.currentPage}

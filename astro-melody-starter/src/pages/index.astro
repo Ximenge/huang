@@ -6,6 +6,7 @@ import Card from "@components/CommonCard.astro";
 import Pagination from "@components/Pagination.astro";
 import AdWidget from "@components/AdWidget.astro";
 import AdWidgetTriple from "@components/AdWidgetTriple.astro";
+import InlineAdReplacer from "@components/InlineAdReplacer.astro";
 import { SITE_DESCRIPTION } from "@consts";
 import { sortPosts } from "@utils/sortPosts";
 
@@ -41,6 +42,8 @@ const basePath = "/page/";
       {firstPagePosts.slice(12).map((post) => <Card post={post} />)}
     </div>
   </div>
+
+  <InlineAdReplacer posts={allPosts} skipFirst={3} />
 
   <Pagination
     currentPage={1}
