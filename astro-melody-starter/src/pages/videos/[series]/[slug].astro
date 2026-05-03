@@ -123,14 +123,35 @@ const firstVideoURL = videoURLs[0] || "";
         try {
           var parser = new DOMParser();
           var doc = parser.parseFromString(xml, 'text/xml');
+          var parseError = doc.querySelector('parsererror');
+          if (parseError) {
+            console.warn('[VideoPlayer] VAST XML parse error');
+            return null;
+          }
           var nonlinear = doc.querySelector('NonLinear');
-          if (!nonlinear) return null;
+          if (!nonlinear) {
+            console.log('[VideoPlayer] No NonLinear element in VAST');
+            return null;
+          }
           var imgEl = nonlinear.querySelector('StaticResource');
+          var iframeEl = nonlinear.querySelector('IFrameResource');
+          var htmlEl = nonlinear.querySelector('HTMLResource');
           var clickEl = nonlinear.querySelector('NonLinearClickThrough');
           var width = nonlinear.getAttribute('width') || '300';
           var height = nonlinear.getAttribute('height') || '250';
-          if (!imgEl) return null;
-          var imgSrc = imgEl.textContent.trim();
+          var imgSrc = '';
+          var adType = '';
+          if (imgEl) {
+            imgSrc = imgEl.textContent.trim();
+            adType = 'image';
+          } else if (iframeEl) {
+            imgSrc = iframeEl.textContent.trim();
+            adType = 'iframe';
+          } else if (htmlEl) {
+            imgSrc = htmlEl.textContent.trim();
+            adType = 'html';
+          }
+          if (!imgSrc) return null;
           var clickUrl = clickEl ? clickEl.textContent.trim() : '';
           var impressionEls = doc.querySelectorAll('Impression');
           var impressions = [];
@@ -138,7 +159,7 @@ const firstVideoURL = videoURLs[0] || "";
             var url = el.textContent.trim();
             if (url) impressions.push(url);
           });
-          return { imgSrc: imgSrc, clickUrl: clickUrl, width: width, height: height, impressions: impressions };
+          return { imgSrc: imgSrc, clickUrl: clickUrl, width: width, height: height, impressions: impressions, adType: adType };
         } catch (e) {
           console.warn('[VideoPlayer] VAST parse error:', e);
           return null;
@@ -158,9 +179,15 @@ const firstVideoURL = videoURLs[0] || "";
         var closeEl = overlayEl.querySelector('.video-ad-close');
         if (!linkEl || !imgEl) return;
 
-        imgEl.src = adData.imgSrc;
-        imgEl.style.maxWidth = adData.width + 'px';
-        imgEl.style.maxHeight = adData.height + 'px';
+        if (adData.adType === 'iframe') {
+          linkEl.innerHTML = '<iframe src="' + adData.imgSrc + '" width="' + adData.width + '" height="' + adData.height + '" frameborder="0" scrolling="no" style="border-radius:4px;display:block;"></iframe>';
+        } else if (adData.adType === 'html') {
+          linkEl.innerHTML = '<div style="width:' + adData.width + 'px;height:' + adData.height + 'px;overflow:hidden;border-radius:4px;">' + adData.imgSrc + '</div>';
+        } else {
+          imgEl.src = adData.imgSrc;
+          imgEl.style.maxWidth = adData.width + 'px';
+          imgEl.style.maxHeight = adData.height + 'px';
+        }
         if (adData.clickUrl) {
           linkEl.href = adData.clickUrl;
         }
@@ -178,19 +205,71 @@ const firstVideoURL = videoURLs[0] || "";
       function loadVastAd(overlayEl) {
         if (!adTag) return;
         fetch(adTag, { cache: 'no-store' })
-          .then(function(res) { return res.text(); })
+          .then(function(res) {
+            if (!res.ok) {
+              console.warn('[VideoPlayer] VAST fetch failed, status:', res.status);
+              return '';
+            }
+            return res.text();
+          })
           .then(function(xml) {
+            if (!xml) return;
             var adData = parseVastNonLinear(xml);
             if (adData && adData.imgSrc) {
-              console.log('[VideoPlayer] NonLinear ad loaded:', adData.imgSrc);
+              console.log('[VideoPlayer] NonLinear ad loaded, type:', adData.adType);
               showAdOverlay(overlayEl, adData);
             } else {
-              console.log('[VideoPlayer] No NonLinear ad available');
+              console.log('[VideoPlayer] No NonLinear ad available in VAST response');
             }
           })
           .catch(function(e) {
             console.warn('[VideoPlayer] VAST fetch error:', e);
           });
+      }
+
+      function fixLiveDuration(player) {
+        player.on('loadedmetadata', function() {
+          var duration = player.duration();
+          if (duration === Infinity || isNaN(duration)) {
+            var tech = player.tech({ IWillNotUseThisInPlugins: true });
+            if (tech && tech.vhs) {
+              tech.vhs.duration = function() {
+                var playlists = tech.vhs.playlists;
+                if (playlists && playlists.master && playlists.master.playlists) {
+                  var totalDuration = 0;
+                  playlists.master.playlists.forEach(function(p) {
+                    if (p.targetDuration) {
+                      totalDuration += p.targetDuration;
+                    }
+                  });
+                }
+                var segs = tech.vhs.playlists && tech.vhs.playlists.media_ ? tech.vhs.playlists.media_.segments : null;
+                if (segs && segs.length > 0) {
+                  var total = 0;
+                  segs.forEach(function(seg) {
+                    if (seg.duration) total += seg.duration;
+                  });
+                  if (total > 0) {
+                    player.duration(total);
+                    return;
+                  }
+                }
+              };
+            }
+          }
+        });
+        player.on('progress', function() {
+          var duration = player.duration();
+          if (duration === Infinity || isNaN(duration)) {
+            var buffered = player.buffered();
+            if (buffered && buffered.length > 0) {
+              var end = buffered.end(buffered.length - 1);
+              if (end > 0 && isFinite(end)) {
+                player.duration(end);
+              }
+            }
+          }
+        });
       }
 
       function initPlayers() {
@@ -232,6 +311,8 @@ const firstVideoURL = videoURLs[0] || "";
             var err = player.error();
             if (err) console.error('[VideoPlayer] Error:', err.code, err.message);
           });
+
+          fixLiveDuration(player);
 
           if (vastEnabled) {
             var overlayEl = document.getElementById(el.id + '-ad-overlay');
