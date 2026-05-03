@@ -1,13 +1,10 @@
 ---
-import { VIDEO_VAST_AD_ENABLED, VIDEO_VAST_AD_TAG } from "@consts";
-
 interface Props {
   videoId: string;
   hlsUrl: string;
-  vastEnabled?: boolean;
 }
 
-const { videoId, hlsUrl, vastEnabled = VIDEO_VAST_AD_ENABLED } = Astro.props;
+const { videoId, hlsUrl } = Astro.props;
 ---
 
 <div class="video-player-wrapper">
