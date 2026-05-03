@@ -106,67 +106,83 @@ const firstVideoURL = videoURLs[0] || "";
     <PostComments postId={`video-${video.id}`} />
   </main>
 
-  <script src="https://vjs.zencdn.net/8.10.0/video.min.js"></script>
-  {VIDEO_VAST_AD_ENABLED && <script src="https://imasdk.googleapis.com/js/sdkloader/ima3.js"></script>}
-  {VIDEO_VAST_AD_ENABLED && <script src="https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.js"></script>}
-  <link href="https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.css" rel="stylesheet" />
-  <script is:inline define:vars={{ vastEnabled: VIDEO_VAST_AD_ENABLED }}>
-    document.addEventListener('DOMContentLoaded', function() {
-      var videoElements = document.querySelectorAll('video.video-js');
-      
-      videoElements.forEach(function(videoEl) {
-        var hlsUrl = videoEl.dataset.hlsUrl;
-        var isVastEnabled = videoEl.dataset.vastEnabled === 'true';
-        var vastTag = videoEl.dataset.vastTag || '';
+  <script is:inline define:vars={{ vastEnabled: VIDEO_VAST_AD_ENABLED, vastTag: VIDEO_VAST_AD_ENABLED ? `https://s.magsrv.com/v1/vast.php?idzone=5865426` : '' }}>
+    (function() {
+      function loadScript(src, cb) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = cb;
+        s.onerror = function() {
+          console.warn('[VideoPlayer] Failed to load: ' + src);
+          cb();
+        };
+        document.head.appendChild(s);
+      }
 
-        var player = videojs(videoEl, {
-          controls: true,
-          autoplay: false,
-          preload: 'metadata',
-          fluid: true,
-          responsive: true,
-          html5: {
-            vhs: {
-              overrideNative: true,
-              enableLowInitialPlaylist: true
-            },
-            nativeAudioTracks: false,
-            nativeVideoTracks: false
-          }
-        });
-
-        player.src({
-          src: hlsUrl,
-          type: 'application/x-mpegURL'
-        });
-
-        if (isVastEnabled && vastTag && typeof player.ima === 'function') {
-          try {
-            var imaOptions = {
-              id: videoEl.id,
-              adTagUrl: vastTag,
-              adsRenderingSettings: {
-                loadVideoTimeout: 8000,
-                uiElements: 'countdown'
-              },
-              debug: false,
-              prerollTimeout: 8000,
-              postrollTimeout: 8000,
-              vastLoadTimeout: 8000
-            };
-            player.ima(imaOptions);
-          } catch (e) {
-            console.warn('IMA initialization failed, playing without ads:', e);
-          }
+      function initPlayers() {
+        var videoEls = document.querySelectorAll('video.video-js');
+        if (!videoEls.length || typeof videojs === 'undefined') {
+          console.warn('[VideoPlayer] No video elements or videojs not loaded');
+          return;
         }
 
-        player.on('error', function() {
-          var error = player.error();
-          if (error) {
-            console.error('Video.js error:', error.code, error.message);
+        videoEls.forEach(function(el) {
+          if (el.dataset.vjsInit) return;
+          el.dataset.vjsInit = '1';
+
+          var player = videojs(el, {
+            controls: true,
+            autoplay: false,
+            preload: 'metadata',
+            fluid: true,
+            responsive: true,
+            html5: {
+              vhs: {
+                overrideNative: true,
+                enableLowInitialPlaylist: true
+              },
+              nativeAudioTracks: false,
+              nativeVideoTracks: false
+            }
+          });
+
+          player.on('error', function() {
+            var err = player.error();
+            if (err) console.error('[VideoPlayer] Error:', err.code, err.message);
+          });
+
+          if (vastEnabled && vastTag && typeof player.ima === 'function') {
+            player.ready(function() {
+              try {
+                console.log('[VideoPlayer] Initializing IMA with tag:', vastTag);
+                player.ima({
+                  id: el.id,
+                  adTagUrl: vastTag,
+                  debug: false,
+                  prerollTimeout: 8000,
+                  vastLoadTimeout: 8000
+                });
+              } catch (e) {
+                console.warn('[VideoPlayer] IMA init failed, playing without ads:', e);
+              }
+            });
+          } else if (vastEnabled) {
+            console.warn('[VideoPlayer] VAST enabled but IMA plugin not available (player.ima type:', typeof player.ima, ')');
           }
         });
+      }
+
+      loadScript('https://vjs.zencdn.net/8.10.0/video.min.js', function() {
+        if (vastEnabled) {
+          loadScript('https://imasdk.googleapis.com/js/sdkloader/ima3.js', function() {
+            loadScript('https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.js', function() {
+              initPlayers();
+            });
+          });
+        } else {
+          initPlayers();
+        }
       });
-    });
+    })();
   </script>
 </BaseLayout>

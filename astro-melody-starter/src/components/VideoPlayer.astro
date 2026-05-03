@@ -17,15 +17,14 @@ const { videoId, hlsUrl, vastEnabled = VIDEO_VAST_AD_ENABLED } = Astro.props;
     controls
     preload="metadata"
     playsinline
-    data-hls-url={hlsUrl}
-    data-vast-enabled={vastEnabled ? "true" : "false"}
-    data-vast-tag={vastEnabled ? VIDEO_VAST_AD_TAG : ""}
   >
+    <source src={hlsUrl} type="application/x-mpegURL" />
     <p class="vjs-no-js">您的浏览器不支持视频播放，请<a href="https://videojs.com/html5-video-support/" target="_blank">升级浏览器</a></p>
   </video>
 </div>
 
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.css" rel="stylesheet" />
 <style>
   .video-player-wrapper {
     width: 100%;
