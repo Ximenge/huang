@@ -173,54 +173,80 @@ const firstVideoURL = videoURLs[0] || "";
         } catch (e) {}
       }
 
-      function showAdOverlay(overlayEl, adData) {
-        var linkEl = overlayEl.querySelector('.video-ad-link');
-        var imgEl = overlayEl.querySelector('.video-ad-img');
-        var closeEl = overlayEl.querySelector('.video-ad-close');
-        if (!linkEl || !imgEl) return;
+      function createAdOverlay(playerEl, adData) {
+        var overlay = document.createElement('div');
+        overlay.className = 'video-ad-overlay';
+
+        var link = document.createElement('a');
+        link.className = 'video-ad-link';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        if (adData.clickUrl) link.href = adData.clickUrl;
 
         if (adData.adType === 'iframe') {
-          linkEl.innerHTML = '<iframe src="' + adData.imgSrc + '" width="' + adData.width + '" height="' + adData.height + '" frameborder="0" scrolling="no" style="border-radius:4px;display:block;"></iframe>';
+          var iframe = document.createElement('iframe');
+          iframe.src = adData.imgSrc;
+          iframe.width = adData.width;
+          iframe.height = adData.height;
+          iframe.frameBorder = '0';
+          iframe.scrolling = 'no';
+          iframe.style.cssText = 'border-radius:4px;display:block;';
+          link.appendChild(iframe);
         } else if (adData.adType === 'html') {
-          linkEl.innerHTML = '<div style="width:' + adData.width + 'px;height:' + adData.height + 'px;overflow:hidden;border-radius:4px;">' + adData.imgSrc + '</div>';
+          var div = document.createElement('div');
+          div.style.cssText = 'width:' + adData.width + 'px;height:' + adData.height + 'px;overflow:hidden;border-radius:4px;';
+          div.innerHTML = adData.imgSrc;
+          link.appendChild(div);
         } else {
-          imgEl.src = adData.imgSrc;
-          imgEl.style.maxWidth = adData.width + 'px';
-          imgEl.style.maxHeight = adData.height + 'px';
+          var img = document.createElement('img');
+          img.className = 'video-ad-img';
+          img.src = adData.imgSrc;
+          img.alt = '广告';
+          img.style.maxWidth = adData.width + 'px';
+          img.style.maxHeight = adData.height + 'px';
+          link.appendChild(img);
         }
-        if (adData.clickUrl) {
-          linkEl.href = adData.clickUrl;
-        }
-        overlayEl.style.display = 'flex';
 
-        adData.impressions.forEach(fireImpression);
-
-        closeEl.onclick = function(e) {
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'video-ad-close';
+        closeBtn.title = '关闭广告';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = function(e) {
           e.stopPropagation();
           e.preventDefault();
-          overlayEl.style.display = 'none';
+          overlay.style.display = 'none';
         };
+
+        overlay.appendChild(link);
+        overlay.appendChild(closeBtn);
+        playerEl.appendChild(overlay);
+
+        adData.impressions.forEach(fireImpression);
+        console.log('[VideoPlayer] Ad overlay created and appended');
       }
 
-      function loadVastAd(overlayEl) {
+      function loadVastAd(playerEl) {
         if (!adTag) return;
         var proxyUrl = '/api/vast-proxy?url=' + encodeURIComponent(adTag);
+        console.log('[VideoPlayer] Fetching VAST via proxy:', proxyUrl);
         fetch(proxyUrl, { cache: 'no-store' })
           .then(function(res) {
-            if (!res.ok) {
-              console.warn('[VideoPlayer] VAST proxy fetch failed, status:', res.status);
-              return '';
-            }
+            console.log('[VideoPlayer] VAST proxy response status:', res.status);
+            if (!res.ok) return '';
             return res.text();
           })
           .then(function(xml) {
-            if (!xml) return;
+            if (!xml) {
+              console.warn('[VideoPlayer] Empty VAST response');
+              return;
+            }
+            console.log('[VideoPlayer] VAST XML length:', xml.length);
             var adData = parseVastNonLinear(xml);
             if (adData && adData.imgSrc) {
-              console.log('[VideoPlayer] NonLinear ad loaded, type:', adData.adType);
-              showAdOverlay(overlayEl, adData);
+              console.log('[VideoPlayer] NonLinear ad loaded, type:', adData.adType, 'src:', adData.imgSrc);
+              createAdOverlay(playerEl, adData);
             } else {
-              console.log('[VideoPlayer] No NonLinear ad available in VAST response');
+              console.log('[VideoPlayer] No NonLinear ad available');
             }
           })
           .catch(function(e) {
@@ -234,28 +260,16 @@ const firstVideoURL = videoURLs[0] || "";
           if (duration === Infinity || isNaN(duration)) {
             var tech = player.tech({ IWillNotUseThisInPlugins: true });
             if (tech && tech.vhs) {
-              tech.vhs.duration = function() {
-                var playlists = tech.vhs.playlists;
-                if (playlists && playlists.master && playlists.master.playlists) {
-                  var totalDuration = 0;
-                  playlists.master.playlists.forEach(function(p) {
-                    if (p.targetDuration) {
-                      totalDuration += p.targetDuration;
-                    }
-                  });
+              var segs = tech.vhs.playlists && tech.vhs.playlists.media_ ? tech.vhs.playlists.media_.segments : null;
+              if (segs && segs.length > 0) {
+                var total = 0;
+                segs.forEach(function(seg) {
+                  if (seg.duration) total += seg.duration;
+                });
+                if (total > 0) {
+                  player.duration(total);
                 }
-                var segs = tech.vhs.playlists && tech.vhs.playlists.media_ ? tech.vhs.playlists.media_.segments : null;
-                if (segs && segs.length > 0) {
-                  var total = 0;
-                  segs.forEach(function(seg) {
-                    if (seg.duration) total += seg.duration;
-                  });
-                  if (total > 0) {
-                    player.duration(total);
-                    return;
-                  }
-                }
-              };
+              }
             }
           }
         });
@@ -315,23 +329,16 @@ const firstVideoURL = videoURLs[0] || "";
 
           fixLiveDuration(player);
 
-          if (vastEnabled) {
-            var overlayEl = document.getElementById(el.id + '-ad-overlay');
-            if (overlayEl) {
-              var adShown = false;
-              player.on('playing', function() {
-                if (!adShown) {
-                  adShown = true;
-                  loadVastAd(overlayEl);
-                }
-              });
-              player.on('pause', function() {
-                if (!adShown) {
-                  adShown = true;
-                  loadVastAd(overlayEl);
-                }
-              });
-            }
+          if (vastEnabled && adTag) {
+            player.on('ready', function() {
+              var playerEl = el.closest('.video-player-wrapper');
+              if (playerEl) {
+                console.log('[VideoPlayer] Player ready, loading ad for', el.id);
+                loadVastAd(playerEl);
+              } else {
+                console.warn('[VideoPlayer] No wrapper found for', el.id);
+              }
+            });
           }
         });
       }
