@@ -1,0 +1,57 @@
+---
+import { VIDEO_VAST_AD_ENABLED, VIDEO_VAST_AD_TAG } from "@consts";
+
+interface Props {
+  videoId: string;
+  hlsUrl: string;
+  vastEnabled?: boolean;
+}
+
+const { videoId, hlsUrl, vastEnabled = VIDEO_VAST_AD_ENABLED } = Astro.props;
+---
+
+<div class="video-player-wrapper">
+  <video
+    id={videoId}
+    class="video-js vjs-big-play-centered vjs-fluid"
+    controls
+    preload="metadata"
+    playsinline
+    data-hls-url={hlsUrl}
+    data-vast-enabled={vastEnabled ? "true" : "false"}
+    data-vast-tag={vastEnabled ? VIDEO_VAST_AD_TAG : ""}
+  >
+    <p class="vjs-no-js">您的浏览器不支持视频播放，请<a href="https://videojs.com/html5-video-support/" target="_blank">升级浏览器</a></p>
+  </video>
+</div>
+
+<link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
+<style>
+  .video-player-wrapper {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  .video-player-wrapper .video-js {
+    width: 100%;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  .video-player-wrapper .video-js .vjs-big-play-button {
+    border: none;
+    border-radius: 50%;
+    width: 2em;
+    height: 2em;
+    line-height: 2em;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  .video-player-wrapper .video-js:hover .vjs-big-play-button {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  .video-player-wrapper .video-js .vjs-loading-spinner {
+    border-color: #3b82f6;
+  }
+</style>
