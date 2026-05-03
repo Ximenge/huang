@@ -204,10 +204,11 @@ const firstVideoURL = videoURLs[0] || "";
 
       function loadVastAd(overlayEl) {
         if (!adTag) return;
-        fetch(adTag, { cache: 'no-store' })
+        var proxyUrl = '/api/vast-proxy?url=' + encodeURIComponent(adTag);
+        fetch(proxyUrl, { cache: 'no-store' })
           .then(function(res) {
             if (!res.ok) {
-              console.warn('[VideoPlayer] VAST fetch failed, status:', res.status);
+              console.warn('[VideoPlayer] VAST proxy fetch failed, status:', res.status);
               return '';
             }
             return res.text();
@@ -223,7 +224,7 @@ const firstVideoURL = videoURLs[0] || "";
             }
           })
           .catch(function(e) {
-            console.warn('[VideoPlayer] VAST fetch error:', e);
+            console.warn('[VideoPlayer] VAST proxy fetch error:', e);
           });
       }
 
