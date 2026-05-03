@@ -106,7 +106,7 @@ const firstVideoURL = videoURLs[0] || "";
     <PostComments postId={`video-${video.id}`} />
   </main>
 
-  <script is:inline define:vars={{ vastEnabled: VIDEO_VAST_AD_ENABLED, instreamTag: VIDEO_VAST_INSTREAM_TAG, nonlinearTag: VIDEO_VAST_NONLINEAR_TAG }}>
+  <script is:inline define:vars={{ vastEnabled: VIDEO_VAST_AD_ENABLED, nonlinearTag: VIDEO_VAST_NONLINEAR_TAG, instreamTag: VIDEO_VAST_INSTREAM_TAG }}>
     (function() {
       function loadScript(src, cb) {
         var s = document.createElement('script');
@@ -130,10 +130,16 @@ const firstVideoURL = videoURLs[0] || "";
           if (el.dataset.vjsInit) return;
           el.dataset.vjsInit = '1';
 
+          var hlsUrl = el.dataset.hlsUrl || '';
+          if (!hlsUrl) {
+            console.warn('[VideoPlayer] No HLS URL found for', el.id);
+            return;
+          }
+
           var player = videojs(el, {
             controls: true,
             autoplay: false,
-            preload: 'metadata',
+            preload: 'auto',
             fluid: true,
             responsive: true,
             html5: {
@@ -152,44 +158,53 @@ const firstVideoURL = videoURLs[0] || "";
           });
 
           if (vastEnabled && typeof player.ima === 'function') {
-            player.ready(function() {
-              try {
-                var primaryTag = nonlinearTag || instreamTag;
-                console.log('[VideoPlayer] Initializing IMA with primary tag:', primaryTag);
-                player.ima({
-                  id: el.id,
-                  adTagUrl: primaryTag,
-                  debug: false,
-                  prerollTimeout: 8000,
-                  vastLoadTimeout: 8000
-                });
+            try {
+              var adTag = nonlinearTag || instreamTag;
+              console.log('[VideoPlayer] Initializing IMA with tag:', adTag);
+              player.ima({
+                id: el.id,
+                adTagUrl: adTag,
+                debug: true,
+                prerollTimeout: 10000,
+                vastLoadTimeout: 10000
+              });
 
-                if (instreamTag && nonlinearTag && instreamTag !== nonlinearTag) {
-                  player.on('adsready', function() {
-                    try {
-                      player.ima.changeAdTag(instreamTag);
-                      player.ima.requestAds();
-                      console.log('[VideoPlayer] Requested secondary In-Stream ads:', instreamTag);
-                    } catch (e2) {
-                      console.warn('[VideoPlayer] Secondary ad request failed:', e2);
-                    }
-                  });
-                }
-              } catch (e) {
-                console.warn('[VideoPlayer] IMA init failed, playing without ads:', e);
-              }
+              player.src({
+                src: hlsUrl,
+                type: 'application/x-mpegURL'
+              });
+
+              console.log('[VideoPlayer] IMA initialized, source set for', el.id);
+            } catch (e) {
+              console.warn('[VideoPlayer] IMA init failed, playing without ads:', e);
+              player.src({
+                src: hlsUrl,
+                type: 'application/x-mpegURL'
+              });
+            }
+          } else {
+            if (vastEnabled) {
+              console.warn('[VideoPlayer] VAST enabled but IMA plugin not available. player.ima type:', typeof player.ima, 'typeof videojs:', typeof videojs);
+            }
+            player.src({
+              src: hlsUrl,
+              type: 'application/x-mpegURL'
             });
-          } else if (vastEnabled) {
-            console.warn('[VideoPlayer] VAST enabled but IMA plugin not available (player.ima type:', typeof player.ima, ')');
           }
         });
       }
 
       loadScript('https://vjs.zencdn.net/8.10.0/video.min.js', function() {
+        console.log('[VideoPlayer] Video.js loaded, version:', videojs.VERSION);
         if (vastEnabled) {
-          loadScript('https://imasdk.googleapis.com/js/sdkloader/ima3.js', function() {
-            loadScript('https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.js', function() {
-              initPlayers();
+          loadScript('https://cdn.jsdelivr.net/npm/videojs-contrib-ads@7.5.2/dist/videojs-contrib-ads.min.js', function() {
+            console.log('[VideoPlayer] videojs-contrib-ads loaded');
+            loadScript('https://imasdk.googleapis.com/js/sdkloader/ima3.js', function() {
+              console.log('[VideoPlayer] IMA SDK loaded');
+              loadScript('https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.js', function() {
+                console.log('[VideoPlayer] videojs-ima loaded, player.ima type:', typeof videojs.getPlayer ? 'unknown' : 'check after init');
+                initPlayers();
+              });
             });
           });
         } else {

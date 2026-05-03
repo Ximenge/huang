@@ -12,10 +12,10 @@ const { videoId, hlsUrl } = Astro.props;
     id={videoId}
     class="video-js vjs-big-play-centered vjs-fluid"
     controls
-    preload="metadata"
+    preload="auto"
     playsinline
+    data-hls-url={hlsUrl}
   >
-    <source src={hlsUrl} type="application/x-mpegURL" />
     <p class="vjs-no-js">您的浏览器不支持视频播放，请<a href="https://videojs.com/html5-video-support/" target="_blank">升级浏览器</a></p>
   </video>
 </div>
