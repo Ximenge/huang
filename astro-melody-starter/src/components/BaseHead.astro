@@ -10,6 +10,9 @@ interface Props {
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
 const { title = META_TITLE, description, image = "/blog-placeholder-1.avif" } = Astro.props;
+
+const SITE_SUFFIX = "-91图图网-分享精选优质写真福利套图，视频全收集|Cosplayl二次元|写真|福利|图包|美图";
+const fullTitle = title === META_TITLE ? title : title + SITE_SUFFIX;
 ---
 
 <!-- Global Metadata -->
@@ -44,14 +47,14 @@ const { title = META_TITLE, description, image = "/blog-placeholder-1.avif" } = 
 </script>
 
 <!-- Primary Meta Tags -->
-<title>{title}</title>
-<meta name="title" content={title} />
+<title>{fullTitle}</title>
+<meta name="title" content={fullTitle} />
 <meta name="description" content={description} />
 
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website" />
 <meta property="og:url" content={Astro.url} />
-<meta property="og:title" content={title} />
+<meta property="og:title" content={fullTitle} />
 <meta property="og:description" content={description} />
 <meta property="og:image" content={new URL(image, Astro.url)} />
 <meta property="og:site_name" content={META_TITLE} />
@@ -60,7 +63,7 @@ const { title = META_TITLE, description, image = "/blog-placeholder-1.avif" } = 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content={Astro.url} />
-<meta property="twitter:title" content={title} />
+<meta property="twitter:title" content={fullTitle} />
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={new URL(image, Astro.url)} />
 
@@ -68,7 +71,7 @@ const { title = META_TITLE, description, image = "/blog-placeholder-1.avif" } = 
 <script type="application/ld+json" set:html={JSON.stringify({
   "@context": "https://schema.org",
   "@type": "WebSite",
-  "name": title,
+  "name": fullTitle,
   "description": description,
   "url": canonicalURL.toString(),
   "image": new URL(image, Astro.url).toString()
