@@ -12,21 +12,27 @@ const { videoId, hlsUrl } = Astro.props;
     id={videoId}
     class="video-js vjs-big-play-centered vjs-fluid"
     controls
-    preload="auto"
+    preload="metadata"
     playsinline
     data-hls-url={hlsUrl}
   >
     <p class="vjs-no-js">您的浏览器不支持视频播放，请<a href="https://videojs.com/html5-video-support/" target="_blank">升级浏览器</a></p>
   </video>
+  <div class="video-ad-overlay" id={`${videoId}-ad-overlay`} style="display:none;">
+    <a class="video-ad-link" target="_blank" rel="noopener noreferrer">
+      <img class="video-ad-img" alt="广告" />
+    </a>
+    <button class="video-ad-close" title="关闭广告">&times;</button>
+  </div>
 </div>
 
 <link href="https://vjs.zencdn.net/8.10.0/video-js.css" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.css" rel="stylesheet" />
 <style>
   .video-player-wrapper {
     width: 100%;
     max-width: 100%;
     margin: 0 auto;
+    position: relative;
   }
   .video-player-wrapper .video-js {
     width: 100%;
@@ -49,5 +55,48 @@ const { videoId, hlsUrl } = Astro.props;
   }
   .video-player-wrapper .video-js .vjs-loading-spinner {
     border-color: #3b82f6;
+  }
+  .video-ad-overlay {
+    position: absolute;
+    bottom: 50px;
+    right: 10px;
+    z-index: 100;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 6px;
+    padding: 4px;
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    max-width: 300px;
+  }
+  .video-ad-overlay .video-ad-link {
+    display: block;
+    line-height: 0;
+  }
+  .video-ad-overlay .video-ad-img {
+    display: block;
+    max-width: 280px;
+    max-height: 250px;
+    border-radius: 4px;
+  }
+  .video-ad-overlay .video-ad-close {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    font-size: 14px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 101;
+  }
+  .video-ad-overlay .video-ad-close:hover {
+    background: rgba(220, 38, 38, 0.9);
   }
 </style>

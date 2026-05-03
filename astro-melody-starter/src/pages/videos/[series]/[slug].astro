@@ -119,6 +119,80 @@ const firstVideoURL = videoURLs[0] || "";
         document.head.appendChild(s);
       }
 
+      function parseVastNonLinear(xml) {
+        try {
+          var parser = new DOMParser();
+          var doc = parser.parseFromString(xml, 'text/xml');
+          var nonlinear = doc.querySelector('NonLinear');
+          if (!nonlinear) return null;
+          var imgEl = nonlinear.querySelector('StaticResource');
+          var clickEl = nonlinear.querySelector('NonLinearClickThrough');
+          var width = nonlinear.getAttribute('width') || '300';
+          var height = nonlinear.getAttribute('height') || '250';
+          if (!imgEl) return null;
+          var imgSrc = imgEl.textContent.trim();
+          var clickUrl = clickEl ? clickEl.textContent.trim() : '';
+          var impressionEls = doc.querySelectorAll('Impression');
+          var impressions = [];
+          impressionEls.forEach(function(el) {
+            var url = el.textContent.trim();
+            if (url) impressions.push(url);
+          });
+          return { imgSrc: imgSrc, clickUrl: clickUrl, width: width, height: height, impressions: impressions };
+        } catch (e) {
+          console.warn('[VideoPlayer] VAST parse error:', e);
+          return null;
+        }
+      }
+
+      function fireImpression(url) {
+        if (!url) return;
+        try {
+          fetch(url, { mode: 'no-cors', cache: 'no-store' }).catch(function() {});
+        } catch (e) {}
+      }
+
+      function showAdOverlay(overlayEl, adData) {
+        var linkEl = overlayEl.querySelector('.video-ad-link');
+        var imgEl = overlayEl.querySelector('.video-ad-img');
+        var closeEl = overlayEl.querySelector('.video-ad-close');
+        if (!linkEl || !imgEl) return;
+
+        imgEl.src = adData.imgSrc;
+        imgEl.style.maxWidth = adData.width + 'px';
+        imgEl.style.maxHeight = adData.height + 'px';
+        if (adData.clickUrl) {
+          linkEl.href = adData.clickUrl;
+        }
+        overlayEl.style.display = 'flex';
+
+        adData.impressions.forEach(fireImpression);
+
+        closeEl.onclick = function(e) {
+          e.stopPropagation();
+          e.preventDefault();
+          overlayEl.style.display = 'none';
+        };
+      }
+
+      function loadVastAd(overlayEl) {
+        if (!adTag) return;
+        fetch(adTag, { cache: 'no-store' })
+          .then(function(res) { return res.text(); })
+          .then(function(xml) {
+            var adData = parseVastNonLinear(xml);
+            if (adData && adData.imgSrc) {
+              console.log('[VideoPlayer] NonLinear ad loaded:', adData.imgSrc);
+              showAdOverlay(overlayEl, adData);
+            } else {
+              console.log('[VideoPlayer] No NonLinear ad available');
+            }
+          })
+          .catch(function(e) {
+            console.warn('[VideoPlayer] VAST fetch error:', e);
+          });
+      }
+
       function initPlayers() {
         var videoEls = document.querySelectorAll('video.video-js');
         if (!videoEls.length || typeof videojs === 'undefined') {
@@ -131,10 +205,7 @@ const firstVideoURL = videoURLs[0] || "";
           el.dataset.vjsInit = '1';
 
           var hlsUrl = el.dataset.hlsUrl || '';
-          if (!hlsUrl) {
-            console.warn('[VideoPlayer] No HLS URL found for', el.id);
-            return;
-          }
+          if (!hlsUrl) return;
 
           var player = videojs(el, {
             controls: true,
@@ -152,105 +223,41 @@ const firstVideoURL = videoURLs[0] || "";
             }
           });
 
+          player.src({
+            src: hlsUrl,
+            type: 'application/x-mpegURL'
+          });
+
           player.on('error', function() {
             var err = player.error();
             if (err) console.error('[VideoPlayer] Error:', err.code, err.message);
           });
 
-          if (vastEnabled && adTag && typeof player.ima === 'function') {
-            try {
-              console.log('[VideoPlayer] Initializing IMA with tag:', adTag);
-              player.ima({
-                id: el.id,
-                adTagUrl: adTag,
-                debug: false,
-                showCountdown: false,
-                adLabel: '广告',
-                adsRenderingSettings: {
-                  restoreCustomPlaybackStateOnAdBreakComplete: true
+          if (vastEnabled) {
+            var overlayEl = document.getElementById(el.id + '-ad-overlay');
+            if (overlayEl) {
+              var adShown = false;
+              player.on('playing', function() {
+                if (!adShown) {
+                  adShown = true;
+                  loadVastAd(overlayEl);
                 }
               });
-
-              player.src({
-                src: hlsUrl,
-                type: 'application/x-mpegURL'
-              });
-
-              player.on('adserror', function() {
-                console.warn('[VideoPlayer] Ad error, removing ad container');
-                var adContainer = el.parentNode.querySelector('.ima-ad-container');
-                if (adContainer) adContainer.style.display = 'none';
-              });
-
-              player.on('adtimeout', function() {
-                console.warn('[VideoPlayer] Ad timeout, removing ad container');
-                var adContainer = el.parentNode.querySelector('.ima-ad-container');
-                if (adContainer) adContainer.style.display = 'none';
-              });
-
-              console.log('[VideoPlayer] IMA initialized for', el.id);
-            } catch (e) {
-              console.warn('[VideoPlayer] IMA init failed, playing without ads:', e);
-              player.src({
-                src: hlsUrl,
-                type: 'application/x-mpegURL'
+              player.on('pause', function() {
+                if (!adShown) {
+                  adShown = true;
+                  loadVastAd(overlayEl);
+                }
               });
             }
-          } else {
-            if (vastEnabled) {
-              console.warn('[VideoPlayer] VAST enabled but IMA plugin not available');
-            }
-            player.src({
-              src: hlsUrl,
-              type: 'application/x-mpegURL'
-            });
           }
         });
       }
 
       loadScript('https://vjs.zencdn.net/8.10.0/video.min.js', function() {
         console.log('[VideoPlayer] Video.js loaded');
-        if (vastEnabled && adTag) {
-          loadScript('https://cdn.jsdelivr.net/npm/videojs-contrib-ads@7.5.2/dist/videojs-contrib-ads.min.js', function() {
-            console.log('[VideoPlayer] contrib-ads loaded');
-            loadScript('https://imasdk.googleapis.com/js/sdkloader/ima3.js', function() {
-              console.log('[VideoPlayer] IMA SDK loaded');
-              loadScript('https://cdn.jsdelivr.net/npm/videojs-ima@2.3.0/dist/videojs.ima.min.js', function() {
-                console.log('[VideoPlayer] videojs-ima loaded');
-                initPlayers();
-              });
-            });
-          });
-        } else {
-          initPlayers();
-        }
+        initPlayers();
       });
     })();
   </script>
-
-  <style is:global>
-    .video-player-wrapper .ima-ad-container {
-      z-index: 10;
-    }
-    .video-player-wrapper .ima-ad-container .ima-controls-div {
-      display: flex !important;
-    }
-    .video-player-wrapper .ima-ad-container .ima-countdown-div {
-      display: block !important;
-    }
-    .video-player-wrapper .bumpable-ima-ad-container {
-      position: absolute !important;
-      bottom: 40px !important;
-      right: 10px !important;
-      top: auto !important;
-      left: auto !important;
-      z-index: 10;
-    }
-    .video-player-wrapper .ima-nonlinear-ad {
-      position: relative !important;
-    }
-    .video-player-wrapper .ima-ad-container > div:first-child {
-      cursor: pointer;
-    }
-  </style>
 </BaseLayout>
