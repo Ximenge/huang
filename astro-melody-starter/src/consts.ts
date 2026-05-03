@@ -55,10 +55,7 @@ export const DOWNLOAD_POPUNDER_ENABLED = true;
 export const DOWNLOAD_POPUNDER_IDZONE = "5914280";
 
 export const VIDEO_VAST_AD_ENABLED = true;
-export const VIDEO_VAST_INSTREAM_IDZONE = "5865426";
-export const VIDEO_VAST_INSTREAM_TAG = `https://s.magsrv.com/v1/vast.php?idzone=5865426`;
-export const VIDEO_VAST_NONLINEAR_IDZONE = "5865438";
-export const VIDEO_VAST_NONLINEAR_TAG = `https://s.magsrv.com/v1/vast.php?idzone=5865438`;
+export const VIDEO_VAST_AD_TAG = `https://s.magsrv.com/v1/vast.php?idzone=5865438`;
 
 export const PIN_ORDER_ENABLED = true;
 
