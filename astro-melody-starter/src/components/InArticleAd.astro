@@ -1,58 +1,72 @@
 ---
-// InArticleAd.astro - 文章内嵌原生广告（第一张图和第二张图之间）
+// InArticleAd.astro - 文章内嵌原生广告（多位置）
 // Zone ID: 5910390
-// HTML结构: <p><img></p> <p><img></p>  每张图被<p>包裹
-// 插入策略: 找到第2个包含img的<p>，在其前面插入广告
+// 广告位: 第1张图后、第2张图后、倒数第2张图前、最后一张图后
 ---
 
-<div id="inArticleAdContainer" class="in-article-ad-hidden">
-  <script is:inline async type="application/javascript" src="https://a.magsrv.com/ad-provider.js"></script>
+<div id="inArticleAd1" class="in-article-ad-hidden">
   <ins class="eas6a97888e2" data-zoneid="5910390"></ins>
-  <script is:inline>(AdProvider = window.AdProvider || []).push({"serve": {}});</script>
+</div>
+<div id="inArticleAd2" class="in-article-ad-hidden">
+  <ins class="eas6a97888e2" data-zoneid="5910390"></ins>
+</div>
+<div id="inArticleAd3" class="in-article-ad-hidden">
+  <ins class="eas6a97888e2" data-zoneid="5910390"></ins>
+</div>
+<div id="inArticleAd4" class="in-article-ad-hidden">
+  <ins class="eas6a97888e2" data-zoneid="5910390"></ins>
 </div>
 
 <script is:inline>
 (function() {
-  function insertAd() {
-    var adContainer = document.getElementById('inArticleAdContainer');
-    if (!adContainer) return;
+  var inserted = false;
+
+  function insertAds() {
+    if (inserted) return true;
+
+    var ad1 = document.getElementById('inArticleAd1');
+    var ad2 = document.getElementById('inArticleAd2');
+    var ad3 = document.getElementById('inArticleAd3');
+    var ad4 = document.getElementById('inArticleAd4');
+    if (!ad1 || !ad2 || !ad3 || !ad4) return false;
 
     var allP = document.querySelectorAll('article.prose p');
-    var imgPCount = 0;
-    var targetP = null;
-
+    var imgPs = [];
     for (var i = 0; i < allP.length; i++) {
       if (allP[i].querySelector('img')) {
-        imgPCount++;
-        if (imgPCount === 2) {
-          targetP = allP[i];
-          break;
-        }
+        imgPs.push(allP[i]);
       }
     }
 
-    if (targetP) {
-      targetP.parentNode.insertBefore(adContainer, targetP);
-      adContainer.className = 'in-article-ad-visible';
-      return true;
+    var total = imgPs.length;
+    if (total === 0) return false;
+
+    var usedAfter = {};
+    var toInsert = [];
+
+    function tryAdd(afterIdx, adEl) {
+      if (usedAfter[afterIdx]) return;
+      usedAfter[afterIdx] = true;
+      toInsert.push({ afterIndex: afterIdx, ad: adEl });
     }
 
-    if (imgPCount === 1) {
-      var firstImgP = null;
-      for (var j = 0; j < allP.length; j++) {
-        if (allP[j].querySelector('img')) {
-          firstImgP = allP[j];
-          break;
-        }
-      }
-      if (firstImgP && firstImgP.nextSibling) {
-        firstImgP.parentNode.insertBefore(adContainer, firstImgP.nextSibling);
-        adContainer.className = 'in-article-ad-visible';
-        return true;
-      }
+    if (total >= 1) tryAdd(0, ad1);
+    if (total >= 2) tryAdd(1, ad2);
+    if (total >= 4) tryAdd(total - 3, ad3);
+    if (total >= 3) tryAdd(total - 1, ad4);
+
+    for (var j = 0; j < toInsert.length; j++) {
+      var item = toInsert[j];
+      imgPs[item.afterIndex].parentNode.insertBefore(item.ad, imgPs[item.afterIndex].nextSibling);
+      item.ad.className = 'in-article-ad-visible';
     }
 
-    return false;
+    if (toInsert.length > 0) {
+      inserted = true;
+      (AdProvider = window.AdProvider || []).push({"serve": {}});
+    }
+
+    return inserted;
   }
 
   function tryInsert() {
@@ -61,7 +75,7 @@
 
     function attempt() {
       attempts++;
-      var success = insertAd();
+      var success = insertAds();
       if (!success && attempts < maxAttempts) {
         setTimeout(attempt, 300);
       }
@@ -77,6 +91,7 @@
   }
 
   document.addEventListener('astro:page-load', function() {
+    inserted = false;
     setTimeout(tryInsert, 500);
   });
 })();

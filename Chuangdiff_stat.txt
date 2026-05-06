@@ -1,0 +1,6 @@
+ .../src/components/VideoPlayer.astro               |  96 ++++++
+ astro-melody-starter/src/consts.ts                 |   3 +
+ astro-melody-starter/src/pages/api/vast-proxy.ts   |  50 +++
+ .../src/pages/videos/[series]/[slug].astro         | 363 ++++++++++++++-------
+ ...233\264\346\226\260\346\227\245\345\277\227.md" | 163 +++++++++
+ 5 files changed, 556 insertions(+), 119 deletions(-)

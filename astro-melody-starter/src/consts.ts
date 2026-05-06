@@ -57,6 +57,8 @@ export const DOWNLOAD_POPUNDER_IDZONE = "5914280";
 export const VIDEO_VAST_AD_ENABLED = true;
 export const VIDEO_VAST_AD_TAG = `https://s.magsrv.com/v1/vast.php?idzone=5865438`;
 
+export const AGE_VERIFICATION_ENABLED = false;
+
 export const PIN_ORDER_ENABLED = true;
 
 // Search Page Metadata, src/pages/search.astro

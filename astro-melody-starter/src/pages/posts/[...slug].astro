@@ -58,17 +58,20 @@ const imageURL = post.data.cover ? new URL(post.data.cover, Astro.site).toString
       <div>
         <span id="download-post-title" class="hidden">{post.data.title}</span>
         <DownloadAllImages postTitle={post.data.title} />
+        <div class="flex items-center gap-2 mb-4 not-prose">
+          <span class="text-sm text-neutral-600 dark:text-neutral-400">更多内容请看：</span>
+          <div class="flex flex-wrap gap-2">
+            {
+              post.data.tags.map((tag) => (
+                <span class="badge badge-outline badge-md">
+                  <a href={`/tags/${tag}/1/`}>{tag}</a>
+                </span>
+              ))
+            }
+          </div>
+        </div>
         <Content />
         <InArticleAd />
-      </div>
-      <div class="flex gap-2 prose-a:no-underline">
-        {
-          post.data.tags.map((tag) => (
-            <span class="badge badge-outline badge-md">
-              <a href={`/tags/${tag}/1/`}>{tag}</a>
-            </span>
-          ))
-        }
       </div>
       <div class="mt-4 flex justify-between">
         <small

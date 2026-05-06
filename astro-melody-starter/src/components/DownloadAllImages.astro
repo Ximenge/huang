@@ -13,7 +13,7 @@ const { postTitle } = Astro.props;
     <svg class="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
     </svg>
-    <span class="text-sm text-gray-700 dark:text-gray-300">下载本页全部图片：</span>
+    <span class="text-sm text-gray-700 dark:text-gray-300">下载本页全部图片（压缩版）：</span>
     <button id="download-all-images" class="download-pop-trigger inline-flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 rounded-md transition-colors duration-200 cursor-pointer">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
@@ -31,6 +31,12 @@ const { postTitle } = Astro.props;
       <span class="text-xs font-medium text-amber-600 dark:text-amber-400">点击下载按钮将弹出广告，请提前注意，文件将正常下载</span>
     </div>
   )}
+  <div class="mt-2 flex items-center gap-1.5 px-1">
+    <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path d="M10 0C4.477 0 0 4.477 0 10s4.477 10 10 10 10-4.477 10-10S15.523 0 10 0zm4.59 6.61l-1.67 7.87c-.12.55-.45.68-.91.42l-2.52-1.86-1.22 1.17c-.13.14-.25.25-.51.25l.18-2.56 4.68-4.23c.2-.18-.05-.29-.32-.1l-5.79 3.64-2.49-.78c-.54-.17-.55-.54.11-.8l9.73-3.75c.45-.17.84.11.69.8z"/>
+    </svg>
+    <span class="text-xs font-medium text-blue-600 dark:text-blue-400">下载原图请查看<a href="/guestbook/" class="underline hover:text-blue-800 dark:hover:text-blue-300">留言板</a>，<a href="https://t.me/+bpYJbHRLAHgwY2Fl" target="_blank" rel="noopener noreferrer" class="underline hover:text-blue-800 dark:hover:text-blue-300">加入 Telegram 频道</a></span>
+  </div>
 </div>
 
 <script is:inline>

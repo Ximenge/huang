@@ -41,6 +41,46 @@ function getKV(context: any): KVNamespace | null {
   return null;
 }
 
+function sanitizeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+function containsMaliciousContent(str: string): boolean {
+  const lower = str.toLowerCase();
+  const patterns = [
+    /<\s*script/i,
+    /<\s*img[^>]*onerror/i,
+    /<\s*iframe/i,
+    /<\s*object/i,
+    /<\s*embed/i,
+    /<\s*svg[^>]*onload/i,
+    /<\s*body[^>]*onload/i,
+    /<\s*input[^>]*onfocus/i,
+    /<\s*details[^>]*on toggle/i,
+    /<\s*marquee[^>]*onstart/i,
+    /<\s*video[^>]*onerror/i,
+    /<\s*audio[^>]*onerror/i,
+    /javascript\s*:/i,
+    /on\w+\s*=/i,
+    /data\s*:\s*text\/html/i,
+    /vbscript\s*:/i,
+    /expression\s*\(/i,
+    /url\s*\(\s*javascript/i,
+    /document\.(cookie|location|write|domain)/i,
+    /window\.(location|open|eval)/i,
+    /eval\s*\(/i,
+    /setTimeout\s*\(\s*['"]/i,
+    /setInterval\s*\(\s*['"]/i,
+    /new\s+Function\s*\(/i,
+  ];
+  return patterns.some(pattern => pattern.test(lower));
+}
+
 export const GET: APIRoute = async (context) => {
   try {
     const KV = getKV(context);
@@ -129,6 +169,20 @@ export const POST: APIRoute = async (context) => {
       });
     }
 
+    if (containsMaliciousContent(body.content)) {
+      return new Response(JSON.stringify({ error: '内容包含不允许的代码' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (body.nickname && containsMaliciousContent(body.nickname)) {
+      return new Response(JSON.stringify({ error: '昵称包含不允许的代码' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const rateLimitKey = `rate_limit:${ip}:${body.postId}`;
     const lastSubmit = await KV.get(rateLimitKey);
     if (lastSubmit && Date.now() - parseInt(lastSubmit) < 60000) {
@@ -152,8 +206,8 @@ export const POST: APIRoute = async (context) => {
     const newComment: PostComment = {
       id: Date.now().toString() + Math.random().toString(36).substring(2, 6),
       postId: body.postId,
-      nickname: nickname,
-      content: body.content.substring(0, 500),
+      nickname: sanitizeHtml(nickname),
+      content: sanitizeHtml(body.content.substring(0, 500)),
       ip,
       timestamp: Date.now(),
       likes: 0,
